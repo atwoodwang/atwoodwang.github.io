@@ -1,0 +1,34 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Atwood&#39;s Blog on Atwood&#39;s Blog</title>
+    <link>http://atwoodwang.com/</link>
+    <description>Recent content in Atwood&#39;s Blog on Atwood&#39;s Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Fri, 20 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <atom:link href="/" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>About</title>
+      <link>http://atwoodwang.com/about/</link>
+      <pubDate>Fri, 20 Mar 2020 00:00:00 +0000</pubDate>
+      
+      <guid>http://atwoodwang.com/about/</guid>
+      <description>&lt;p&gt;一个很幸运的能够把兴趣作为工作的人&lt;/p&gt;
+&lt;p&gt;2019 - Now: ByteDance&lt;/p&gt;
+&lt;p&gt;2017 - 2019:  Amazon Web Services&lt;/p&gt;
+&lt;p&gt;Love &amp;amp; Peace&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Posts</title>
+      <link>http://atwoodwang.com/posts/</link>
+      <pubDate>Fri, 20 Mar 2020 00:00:00 +0000</pubDate>
+      
+      <guid>http://atwoodwang.com/posts/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

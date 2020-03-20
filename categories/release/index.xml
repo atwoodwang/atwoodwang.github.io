@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Release on Atwood&#39;s Blog</title>
+    <link>http://atwoodwang.com/categories/release/</link>
+    <description>Recent content in Release on Atwood&#39;s Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Fri, 20 Mar 2020 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="http://atwoodwang.com/categories/release/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>深入浅出 LevelDB (1) - 初识LevelDB</title>
+      <link>http://atwoodwang.com/2020/leveldb_intro/</link>
+      <pubDate>Fri, 20 Mar 2020 00:00:00 +0000</pubDate>
+      
+      <guid>http://atwoodwang.com/2020/leveldb_intro/</guid>
+      <description>Intro 根据LevelDB官方介绍:
+ LevelDB is a fast key-value storage library written at Google that provides an ordered mapping from string keys to string values.
+ LevelDB是一个可持久化的KV数据库引擎，是大名鼎鼎的BigTable论文中描述的键值存储系统的单机版的实现, 它提供了一个极其高速的键值存储系统，并且由 Bigtable 的作者, Google传奇工程师Jeff Dean和Sanjay Ghemawat开发并开源。
+主要特点如下:
+ Keys and values are arbitrary byte arrays. 键和值都是任意长度的字节数组 Data is stored sorted by key. 内部存储是键值对的形式, 默认是按照键值的字典序进行排序. Callers can provide a custom comparison function to override the sort order. 用户可以提供自定义的排序方式 The basic operations are Put(key,value), Get(key), Delete(key). 提供基本操作接口, put(), get(), delete() Multiple changes can be made in one atomic batch.</description>
+    </item>
+    
+  </channel>
+</rss>
