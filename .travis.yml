@@ -3,9 +3,9 @@ go:
   - "1.8"  # 指定Golang 1.8
 # Specify which branches to build using a safelist
 # 分支白名单限制：只有 master 分支的提交才会触发构建
- branches:
-   only:
-     - source
+branches:
+  only:
+    - source
 install:
   # 安装最新的hugo
   - wget https://github.com/gohugoio/hugo/releases/download/v0.67.1/hugo_0.67.1_Linux-64bit.deb
