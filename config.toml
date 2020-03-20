@@ -1,0 +1,64 @@
+baseURL = "http://atwoodwang.com/"
+languageCode = "zh-cn"
+title = "Atwood's Blog"
+theme = "LeaveIt"
+
+paginate = 10
+enableEmoji = true
+enableRobotsTXT = true
+googleAnalytics = ""
+
+preserveTaxonomyNames = true
+
+[blackfriday]
+  hrefTargetBlank = true
+  nofollowLinks = true
+  noreferrerLinks = true
+
+[Permalinks]
+ posts = "/:year/:filename/"
+
+[menu]
+  [[menu.main]]
+    name = "Blog"
+    url = "/posts/"
+    weight = 1
+
+  [[menu.main]]
+    name = "Categories"
+    url = "/categories/"
+    weight = 2
+
+  [[menu.main]]
+    name = "Tags"
+    url = "/tags/"
+    weight = 3
+
+  [[menu.main]]
+    name = "About"
+    url = "/about/"
+    weight = 4
+
+[params]
+    since = 2020
+    author = "Atwood.Wang"                           # Author's name
+    avatar = "/images/me/avatar.png"           # Author's avatar
+    subtitle = "面向梦想(饭碗)编程"         # Subtitle
+    cdn_url = ""           # Base CDN URL
+    home_mode = "" # post or other
+
+    google_verification = ""
+
+    description = "" # site description
+    keywords = "" # site keywords
+
+    beian = ""
+    baiduAnalytics = ""
+
+    license= ''
+
+[params.social]
+    GitHub = "atwoodwang"
+    Email   = "atwoodwang0918@outlook.com"
+    #Wechat = "/images/me/wechat.png"  # Wechat QRcode image
+    #Facebook = "xxoo"
