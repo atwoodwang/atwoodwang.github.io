@@ -1,0 +1,12 @@
+@startuml
+class LookupKey {
+  -const char* start_; // LookupKey 起始的地址
+  -const char* kstart_; // user key起始的地址
+  -const char* end_; // LookupKey结束的地址
+  -char space_[200]; // 规定了LookupKey最少也需要占用200个字节
+  +LookupKey(const Slice& user_key, SequenceNumber sequence); // Constructor
+  +Slice memtable_key() // 返回memtable_key的值, 就是internal_key_size + internal_key本身
+  +Slice internal_key() // 返回internal_key的值. 就是user key + sequence number + type
+  +Slice user_key() // 返回user key的值
+}
+@enduml

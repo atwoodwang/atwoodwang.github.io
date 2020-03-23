@@ -128,6 +128,7 @@ typename SkipList<Key, Comparator>::Node* SkipList<Key, Comparator>::NewNode(
 ```
 
 #### Insert
+这是最最核心的插入操作, 
 ```c++
 template <typename Key, class Comparator>
 void SkipList<Key, Comparator>::Insert(const Key& key) {
@@ -298,3 +299,5 @@ inline void SkipList<Key, Comparator>::Iterator::Prev() {
 ```
 
 相信大家已经对Skiplist的实现有了一个比较清晰的认识, 下一节我们会开始介绍Memtable, 其实现实际上就是对Skiplist的进一步封装.
+
+本篇内容的详细源码可看[leveldb/db/skiplist.h](https://github.com/google/leveldb/blob/master/db/skiplist.h)

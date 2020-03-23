@@ -1,0 +1,14 @@
+@startuml
+class MemTable {
+  -KeyComparator comparator_; // 比较器
+  -int refs_; // 引用次数
+  -Arena arena_; // 内存池
+  -Table table_; // 就是skiplist
+  +explicit MemTable(const InternalKeyComparator& comparator); // Constructor
+  +size_t ApproximateMemoryUsage(); // 返回Memtable所占用的内存大小
+  +Iterator* NewIterator(); // 返回Memtable的遍历器
+  +void Add(SequenceNumber seq, ValueType type, const Slice& key,
+           const Slice& value); // 向Memtable里插入一条键值对
+  +bool Get(const LookupKey& key, std::string* value, Status* s); // 从Memtable中读取一个键的值
+}
+@enduml

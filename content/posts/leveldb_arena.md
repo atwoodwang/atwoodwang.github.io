@@ -43,7 +43,7 @@ inline char* Arena::Allocate(size_t bytes) {
 
 可以看到, 如果当前block的剩余内存大于需要分配的内存, 直接分配即可, 如果当前block大小不够, 则进入`AllocateFallback`方法
 
-#### AllocateFallback
+#### AllocateFallback 
 ```c++
 char* Arena::AllocateFallback(size_t bytes) {
   // 如果需要的内存大于1/4个block大小, 即1024kb, 直接单独分配这一块的内存给它, 当前block现有的剩余内存不变. 比如之前Arena内存中还剩500kb, 现在请求2000kb, 则重新用new申请2000kb的内存, 保存内存的指针, 然后返回. 然后Arena剩余还是500kb, 下一次有请求申请内存, 还是会首先尝试在500kb中分配
@@ -108,3 +108,5 @@ char* Arena::AllocateAligned(size_t bytes) {
   return result;
 }
 ```
+
+本篇内容的详细源码可看[leveldb/util/arena.h](https://github.com/google/leveldb/blob/master/util/arena.h) 和 [leveldb/util/arena.cc](https://github.com/google/leveldb/blob/master/util/arena.cc)
