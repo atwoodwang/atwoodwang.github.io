@@ -1,0 +1,14 @@
+@startuml
+class Iterator {
+  -const SkipList* list_; // 遍历的skiplist
+  -Node* node_; // 当前遍历器指向的节点
+  +explicit Iterator(const SkipList* list); // Constructor
+  +bool Valid() const; // 返回当前遍历器是否指向一个合法的key, 返回false, 如果node为空
+  +const Key& key() const; // 返回当前指向的node里的key
+  +void Next(); // 指针移动到下一个node, 这个node是指最近的node, 并不一定是同一level. 看具体实现可以明白
+  +void Prev(); // 移动到前一个node
+  +void Seek(const Key& target); // 移动到比target大的最小的node
+  +void SeekToFirst(); // 移动到第一个节点
+  +void SeekToLast();  // 移动到最后一个节点
+}
+@enduml

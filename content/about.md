@@ -10,5 +10,9 @@ menu = "main"
 
 2017 - 2019:  Amazon Web Services 
 
+2012 - 2016: The Ohio State University 
+
+1992 Born in Wuhan
+
 Love & Peace
 

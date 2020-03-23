@@ -1,0 +1,14 @@
+@startuml
+class Arena {
+  -char* alloc_ptr_; // 当前memory指针指向的地址
+  -size_t alloc_bytes_remaining_; // 当前block剩余的字节数
+  -std::vector<char*> blocks_; // 保存所有已经分配出去的block的内存起始地址
+  -std::atomic<size_t> memory_usage_; // 整个内存池占用的内存大小
+  +Arena(); // Constructor
+  +char* Allocate(size_t bytes); // 分配指定大小的内存
+  +char* AllocateAligned(size_t bytes); // 分配指定大小的对齐内存
+  +size_t MemoryUsage(); // 返回整个内存池占用的内存大小
+  -char* AllocateFallback(size_t bytes); // Allocate和AllocateAligned方法的内部实现
+  -char* AllocateNewBlock(size_t block_bytes); // Allocate和AllocateAligned方法的内部实现
+}
+@enduml

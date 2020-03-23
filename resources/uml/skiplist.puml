@@ -1,0 +1,21 @@
+@startuml
+class SkipList {
+  - Comparator const compare_; // 比较器, 用来对key排序, 默认是字典序
+  - Arena* const arena_; // 内存池, 用来分配内存
+  - Node* const head_; // 头结点, 默认是12层
+  - std::atomic<int> max_height_; // 当前skiplist最大的层数
+  - Random rnd_; // 用来生成随机数
+
+  +void Insert(const Key& key); // 插入新的key
+  +bool Contains(const Key& key) const; // 判断key是否存在
+  -Node* FindLast() const; // 返回最后skiplist里最后一个节点
+  -int GetMaxHeight(); // 返回当前skiplist里最大的层数
+  -Node* NewNode(const Key& key, int height); // 创建新的节点
+  -int RandomHeight(); // 返回1-12里的随机数
+  -bool Equal(const Key& a, const Key& b) const; // 判断两个key是否一样
+  -bool KeyIsAfterNode(const Key& key, Node* n) const; // 判断参数里的key是不是比参数里的node的key要大
+  -Node* FindGreaterOrEqual(const Key& key, Node** prev) const; // 找到skiplist里key比参数里的key要大的最近的一个节点
+  -Node* FindLessThan(const Key& key) const; // 找到整个skiplist里比key小的最近的一个节点, 和FindLast实现原理类似
+  -Node* FindLast() const; // 返回skiplist里最后一个节点
+}
+@enduml

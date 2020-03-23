@@ -5,13 +5,7 @@ tags: ["LevelDB", "Databases", "C++", "数据引擎"]
 categories: ["Release"]
 date: 2020-03-20
 ---
-<!-- 
-<img alt="" src="../../static/images/leveldb_intro/leveldb_icon.png" >
-<span class="spoiler" ></span>
-&emsp;&emsp;
- -->
- 
-![avatar](/images/leveldb_intro/leveldb_icon.png)
+![level_db_icon](/images/leveldb_intro/leveldb_icon.png)
 
 ## Intro
 根据[LevelDB](https://github.com/google/leveldb)官方介绍:
