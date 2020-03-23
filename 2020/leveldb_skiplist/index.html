@@ -9,8 +9,8 @@
   
   
   
-  <link rel="prev" href="http://atwoodwang.com/2020/leveldb_arena/" />
-  
+  <link rel="prev" href="http://atwoodwang.com/2020/leveldb_varint/" />
+  <link rel="next" href="http://atwoodwang.com/2020/leveldb_memtable/" />
   <link rel="canonical" href="http://atwoodwang.com/2020/leveldb_skiplist/" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -57,7 +57,7 @@
     "datePublished": "2020-03-22 00:00:00 \x2b0000 UTC",
     "dateModified" : "2020-03-22 00:00:00 \x2b0000 UTC",
     "url" : "http:\/\/atwoodwang.com\/2020\/leveldb_skiplist\/",
-    "wordCount" : "934",
+    "wordCount" : "936",
     "keywords" : [ "LevelDB","Databases","C\x2b\x2b","数据引擎", "Atwood\x27s Blog"]
 }
 </script>
@@ -244,6 +244,7 @@ SkipList<span style="color:#f92672">&lt;</span>Key, Comparator<span style="color
   <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">new</span> (node_memory) Node(key);
 }
 </code></pre></div><h4 id="insert">Insert</h4>
+<p>这是最最核心的插入操作,</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">typename</span> Key, <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Comparator</span><span style="color:#f92672">&gt;</span>
 <span style="color:#66d9ef">void</span> SkipList<span style="color:#f92672">&lt;</span>Key, Comparator<span style="color:#f92672">&gt;::</span>Insert(<span style="color:#66d9ef">const</span> Key<span style="color:#f92672">&amp;</span> key) {
   <span style="color:#75715e">// TODO(opt): We can use a barrier-free variant of FindGreaterOrEqual()
@@ -385,6 +386,7 @@ SkipList<span style="color:#f92672">&lt;</span>Key, Comparator<span style="color
   }
 }
 </code></pre></div><p>相信大家已经对Skiplist的实现有了一个比较清晰的认识, 下一节我们会开始介绍Memtable, 其实现实际上就是对Skiplist的进一步封装.</p>
+<p>本篇内容的详细源码可看<a href="https://github.com/google/leveldb/blob/master/db/skiplist.h">leveldb/db/skiplist.h</a></p>
 
     </div>
 
@@ -433,8 +435,10 @@ SkipList<span style="color:#f92672">&lt;</span>Key, Comparator<span style="color
 
     <div class="post-nav">
         
-        <a href="http://atwoodwang.com/2020/leveldb_arena/" class="prev" rel="prev" title="深入浅出 LevelDB (2) - Arena 内存池"><i class="iconfont icon-left"></i>&nbsp;深入浅出 LevelDB (2) - Arena 内存池</a>
+        <a href="http://atwoodwang.com/2020/leveldb_varint/" class="prev" rel="prev" title="深入浅出 LevelDB (4) - Varint 变长编码"><i class="iconfont icon-left"></i>&nbsp;深入浅出 LevelDB (4) - Varint 变长编码</a>
          
+        
+        <a href="http://atwoodwang.com/2020/leveldb_memtable/" class="next" rel="next" title="深入浅出 LevelDB (5) - Memtable 内存表">深入浅出 LevelDB (5) - Memtable 内存表&nbsp;<i class="iconfont icon-right"></i></a>
         
     </div>
 

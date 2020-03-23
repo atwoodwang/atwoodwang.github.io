@@ -10,7 +10,7 @@
   
   
   <link rel="prev" href="http://atwoodwang.com/2020/leveldb_intro/" />
-  <link rel="next" href="http://atwoodwang.com/2020/leveldb_skiplist/" />
+  <link rel="next" href="http://atwoodwang.com/2020/leveldb_varint/" />
   <link rel="canonical" href="http://atwoodwang.com/2020/leveldb_arena/" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -57,7 +57,7 @@
     "datePublished": "2020-03-21 00:00:00 \x2b0000 UTC",
     "dateModified" : "2020-03-21 00:00:00 \x2b0000 UTC",
     "url" : "http:\/\/atwoodwang.com\/2020\/leveldb_arena\/",
-    "wordCount" : "334",
+    "wordCount" : "337",
     "keywords" : [ "LevelDB","Databases","C\x2b\x2b","数据引擎", "Atwood\x27s Blog"]
 }
 </script>
@@ -231,7 +231,8 @@
   assert((<span style="color:#66d9ef">reinterpret_cast</span><span style="color:#f92672">&lt;</span>uintptr_t<span style="color:#f92672">&gt;</span>(result) <span style="color:#f92672">&amp;</span> (align <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
   <span style="color:#66d9ef">return</span> result;
 }
-</code></pre></div>
+</code></pre></div><p>本篇内容的详细源码可看<a href="https://github.com/google/leveldb/blob/master/util/arena.h">leveldb/util/arena.h</a> 和 <a href="https://github.com/google/leveldb/blob/master/util/arena.cc">leveldb/util/arena.cc</a></p>
+
     </div>
 
     <div class="post-copyright">
@@ -282,7 +283,7 @@
         <a href="http://atwoodwang.com/2020/leveldb_intro/" class="prev" rel="prev" title="深入浅出 LevelDB (1) - 初识LevelDB"><i class="iconfont icon-left"></i>&nbsp;深入浅出 LevelDB (1) - 初识LevelDB</a>
          
         
-        <a href="http://atwoodwang.com/2020/leveldb_skiplist/" class="next" rel="next" title="深入浅出 LevelDB (3) - SkipList 跳跃链表">深入浅出 LevelDB (3) - SkipList 跳跃链表&nbsp;<i class="iconfont icon-right"></i></a>
+        <a href="http://atwoodwang.com/2020/leveldb_varint/" class="next" rel="next" title="深入浅出 LevelDB (4) - Varint 变长编码">深入浅出 LevelDB (4) - Varint 变长编码&nbsp;<i class="iconfont icon-right"></i></a>
         
     </div>
 

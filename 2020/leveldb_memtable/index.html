@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  <meta name="author" content="Atwood.Wang">
+  
+  
+  
+  <link rel="prev" href="http://atwoodwang.com/2020/leveldb_skiplist/" />
+  
+  <link rel="canonical" href="http://atwoodwang.com/2020/leveldb_memtable/" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           深入浅出 LevelDB (5) - Memtable 内存表 | Atwood&#39;s Blog
+       
+  </title>
+  <meta name="title" content="深入浅出 LevelDB (5) - Memtable 内存表 | Atwood&#39;s Blog">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  
+  
+ 
+
+<script type="application/ld+json">
+ "@context" : "http://schema.org",
+    "@type" : "BlogPosting",
+    "mainEntityOfPage": {
+         "@type": "WebPage",
+         "@id": "http:\/\/atwoodwang.com\/"
+    },
+    "articleSection" : "posts",
+    "name" : "深入浅出 LevelDB (5) - Memtable 内存表",
+    "headline" : "深入浅出 LevelDB (5) - Memtable 内存表",
+    "description" : "Memtable Memtable是LevelDB的一个重要组成部分, 我们再回顾一篇LevelDB的架构.\n在用户写入数据时, 首先会写入WAL文件(这个后面再讲), 然后就会写入到内存中的memtable里, 当memtable数据达到一定大小时, 会变为immutable的memtable, immutable的memtable只可读不可写, 同时LevelDB会开启一个新的memtable接受新的写入. Immutable的memtable会被后台线程异步的刷新到磁盘上, 变成SST文件, 这就是LevelDB数据持久化的步骤.\nMemtable其实是对skiplist的一层封装, 因为用户的数据在内存中是保存在skiplist里的, 在我们对memtable进行读写时, 底层操作的实际上就是skiplist.\nMemtable结构 现在我们来看看Memtable的结构:\n不难看出Memtable里最核心的方法就是Add和Get, 分别是往内存中写数据和读数据. 但是读者可能会感觉一脸懵逼, 为什么Add方法里的参数看起来这么奇怪? SequenceNumber, ValueType, Slice都是什么? 别急, 我会一个一个解释.\n SequenceNumber: 在LevelDB中, 每个键值对都是有一个版本的. 在我们更新某一个key的值时, 并不会直接覆盖掉之前的值, 而是为这个key创建一个新的版本. 这样设计的理由是因为LevelDB支持snapshot, 所以需要保留旧的键值信息. 所以在插入和读取数据时, 都需要提供一个版本号, 这个版本号的生成会在以后更上层的逻辑里面讲 ValueType: 这是一个enum, 对应着一个字节. 如果为0, 代表这一次记录是删除操作, 如果为1, 代表这一条记录为插入或者更新. Slice: 这个其实就是LevelDB中自己实现了一个string的类, 提供了一些有用的方法. 在阅读源码时可以把它就当做一般的string来看待. 比如key和value都是string类型.  现在我们知道了插入需要提供的参数有版本号, 类型, 键还有值, 那么我们就可以理解具体在memtable里, 用户传入的键值对是怎么存储的了. 为了防止混淆, 以后我们把用户在读写操作时传入的key叫做user key, 传入的值叫做user value. 之前在看skiplist源码的时候我就有一个疑问, 为什么skiplist里插入的时候只需要传入key呢, 数据库存的因该是键值对, 如果skiplist只存了user key, 那么user value存哪里呢? 后来看了memtable才知道, 原来将数据存入skiplist时, 传入的key并不是用户在进行写操作时传入的user key, 而是已经把user key, user value, sequence number 等等信息打包好编码好以后生成的一个复合key.",
+    "inLanguage" : "zh-cn",
+    "author" : "Atwood",
+    "creator" : "Atwood",
+    "publisher": "Atwood",
+    "accountablePerson" : "Atwood",
+    "copyrightHolder" : "Atwood",
+    "copyrightYear" : "2020",
+    "datePublished": "2020-03-23 00:00:00 \x2b0000 UTC",
+    "dateModified" : "2020-03-23 00:00:00 \x2b0000 UTC",
+    "url" : "http:\/\/atwoodwang.com\/2020\/leveldb_memtable\/",
+    "wordCount" : "658",
+    "keywords" : [ "LevelDB","Databases","C\x2b\x2b","数据引擎", "Atwood\x27s Blog"]
+}
+</script>
+
+</head>
+
+  
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-xihuan"></i></a>&nbsp;<a href="http://atwoodwang.com/">Atwood&#39;s Blog</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">Blog</a>
+                
+                <a class="menu-item" href="/categories/" title="">Categories</a>
+                
+                <a class="menu-item" href="/tags/" title="">Tags</a>
+                
+                <a class="menu-item" href="/about/" title="">About</a>
+                
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-xihuan"></i></a>&nbsp;<a href="http://atwoodwang.com/">Atwood&#39;s Blog</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">Blog</a>
+                
+                <a class="menu-item" href="/categories/" title="">Categories</a>
+                
+                <a class="menu-item" href="/tags/" title="">Tags</a>
+                
+                <a class="menu-item" href="/about/" title="">About</a>
+                
+        </div>
+    </div>
+</nav>
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp" itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">深入浅出 LevelDB (5) - Memtable 内存表</h1>
+        <div class="post-meta">
+                Written by <a itemprop="name" href="http://atwoodwang.com/" rel="author">Atwood</a> with ♥ 
+                <span class="post-time">
+                on <time datetime=2020-03-23 itemprop="datePublished">March 23, 2020</time>
+                </span>
+                in
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="http://atwoodwang.com/categories/release/"> Release </a>
+                        
+                </span>
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+            
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <h2 id="memtable">Memtable</h2>
+<p>Memtable是LevelDB的一个重要组成部分, 我们再回顾一篇LevelDB的架构.</p>
+<p><img src="/images/leveldb_intro/structure.jpg" alt="avatar"></p>
+<p>在用户写入数据时, 首先会写入WAL文件(这个后面再讲), 然后就会写入到内存中的memtable里, 当memtable数据达到一定大小时, 会变为immutable的memtable, immutable的memtable只可读不可写, 同时LevelDB会开启一个新的memtable接受新的写入. Immutable的memtable会被后台线程异步的刷新到磁盘上, 变成SST文件, 这就是LevelDB数据持久化的步骤.</p>
+<p>Memtable其实是对skiplist的一层封装, 因为用户的数据在内存中是保存在skiplist里的, 在我们对memtable进行读写时, 底层操作的实际上就是skiplist.</p>
+<h2 id="memtable结构">Memtable结构</h2>
+<p>现在我们来看看Memtable的结构:</p>
+<p><img src="/images/leveldb_memtable/memtable_uml.png" alt="memtable"></p>
+<p>不难看出Memtable里最核心的方法就是<code>Add</code>和<code>Get</code>, 分别是往内存中写数据和读数据. 但是读者可能会感觉一脸懵逼, 为什么<code>Add</code>方法里的参数看起来这么奇怪? <code>SequenceNumber</code>, <code>ValueType</code>, <code>Slice</code>都是什么? 别急, 我会一个一个解释.</p>
+<ul>
+<li>SequenceNumber: 在LevelDB中, 每个键值对都是有一个版本的. 在我们更新某一个key的值时, 并不会直接覆盖掉之前的值, 而是为这个key创建一个新的版本. 这样设计的理由是因为LevelDB支持snapshot, 所以需要保留旧的键值信息. 所以在插入和读取数据时, 都需要提供一个版本号, 这个版本号的生成会在以后更上层的逻辑里面讲</li>
+<li>ValueType: 这是一个enum, 对应着一个字节. 如果为0, 代表这一次记录是删除操作, 如果为1, 代表这一条记录为插入或者更新.</li>
+<li>Slice: 这个其实就是LevelDB中自己实现了一个string的类, 提供了一些有用的方法. 在阅读源码时可以把它就当做一般的string来看待. 比如key和value都是string类型.</li>
+</ul>
+<p>现在我们知道了插入需要提供的参数有版本号, 类型, 键还有值, 那么我们就可以理解具体在memtable里, 用户传入的键值对是怎么存储的了. 为了防止混淆, 以后我们把用户在读写操作时传入的key叫做<code>user key</code>, 传入的值叫做<code>user value</code>. 之前在看skiplist源码的时候我就有一个疑问, 为什么skiplist里插入的时候只需要传入key呢, 数据库存的因该是键值对, 如果skiplist只存了<code>user key</code>, 那么<code>user value</code>存哪里呢? 后来看了memtable才知道, 原来将数据存入skiplist时, 传入的key并不是用户在进行写操作时传入的user key, 而是已经把user key, user value, sequence number 等等信息打包好编码好以后生成的一个复合key. 下面就是这个key的结构:</p>
+<p><img src="/images/leveldb_memtable/key_structure.png" alt="memtable"></p>
+<p>这里面可以看到, 当用户进行写操作时, user key, sequence number和type会组成为一个internal key, 再加上这个internal key进行varint32编码后长度, 会组成为一个memtable key. 同样, user value和它的长度, 会组成为一个memtable value. memtable key和value一起, 才组成了真正被插入到skiplist中的key的结构.</p>
+<p>有了上面的铺垫, 我们就可以更容易理解接下来的源码了</p>
+<h2 id="memtable-源码">Memtable 源码</h2>
+<h4 id="add">Add</h4>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">// Memtable插入操作
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> MemTable<span style="color:#f92672">::</span>Add(SequenceNumber s, ValueType type, <span style="color:#66d9ef">const</span> Slice<span style="color:#f92672">&amp;</span> key,
+                   <span style="color:#66d9ef">const</span> Slice<span style="color:#f92672">&amp;</span> value) {
+  <span style="color:#75715e">// Format of an entry is concatenation of:
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//  key_size     : varint32 of internal_key.size()
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//  key bytes    : char[internal_key.size()]
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//  value_size   : varint32 of value.size()
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//  value bytes  : char[value.size()]
+</span><span style="color:#75715e"></span>  size_t key_size <span style="color:#f92672">=</span> key.size();
+  size_t val_size <span style="color:#f92672">=</span> value.size();
+  
+  <span style="color:#75715e">// internal key = userKey +  sequenceNumber(7 Bytes) + type (insert or delete, 1 Byte)
+</span><span style="color:#75715e"></span>  size_t internal_key_size <span style="color:#f92672">=</span> key_size <span style="color:#f92672">+</span> <span style="color:#ae81ff">8</span>;
+
+  <span style="color:#75715e">// 所以下面求出来的是整个entry的大小, 也就是上面图中的skiplist key的大小. 
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">const</span> size_t encoded_len <span style="color:#f92672">=</span> VarintLength(internal_key_size) <span style="color:#f92672">+</span>
+                             internal_key_size <span style="color:#f92672">+</span> VarintLength(val_size) <span style="color:#f92672">+</span>
+                             val_size;
+  <span style="color:#75715e">// 申请内存
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> buf <span style="color:#f92672">=</span> arena_.Allocate(encoded_len);
+  <span style="color:#75715e">// 把internal_key_size编码后存到buf中
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> p <span style="color:#f92672">=</span> EncodeVarint32(buf, internal_key_size);
+  <span style="color:#75715e">// 接着internal_key_size后面保存user key的内容
+</span><span style="color:#75715e"></span>  memcpy(p, key.data(), key_size);
+  p <span style="color:#f92672">+=</span> key_size;
+  <span style="color:#75715e">// 保存sequence number 和 type的值
+</span><span style="color:#75715e"></span>  EncodeFixed64(p, (s <span style="color:#f92672">&lt;&lt;</span> <span style="color:#ae81ff">8</span>) <span style="color:#f92672">|</span> type);
+  p <span style="color:#f92672">+=</span> <span style="color:#ae81ff">8</span>;
+  <span style="color:#75715e">// 把user value的长度编码后保存
+</span><span style="color:#75715e"></span>  p <span style="color:#f92672">=</span> EncodeVarint32(p, val_size);
+  <span style="color:#75715e">// 保存user value的值
+</span><span style="color:#75715e"></span>  memcpy(p, value.data(), val_size);
+  assert(p <span style="color:#f92672">+</span> val_size <span style="color:#f92672">==</span> buf <span style="color:#f92672">+</span> encoded_len);
+  <span style="color:#75715e">// 把整个entry(key+value)插入到skiplist中, 这里调用的就是之间介绍过的skiplist的insert方法.
+</span><span style="color:#75715e"></span>  table_.Insert(buf);
+}
+</code></pre></div><p>我看到这里的时候, 又有一个疑问, 既然skiplist的insert方法里传入的字符串是memtable_key + memtable_value, 那skiplist里面具体是怎么样来排序的呢? 为什么能保证是按user key的顺序来排序, 而且对于相同的key, 大的sequence number总在后面呢?</p>
+<p>这里就是比较器起到的作用了, 仔细看上面Memtable的结构图里, 我们会发现它有一个私有成员: <code>comparator_</code>. 它会被用来生成skiplist, 并在skiplist对不同key比大小的时候使用到. 用户可以传入自定义的comparator, 这里我们看看默认的实现:</p>
+<p>在skiplist里面排序, 是需要按照internalkey的大小排序的, 所以在comparator里面, 需要先从skiplist key里面解析出internal_key再比较.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#66d9ef">int</span> MemTable<span style="color:#f92672">::</span>KeyComparator<span style="color:#f92672">::</span><span style="color:#66d9ef">operator</span>()(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> aptr,
+                                        <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> bptr) <span style="color:#66d9ef">const</span> {
+  <span style="color:#75715e">// Internal keys are encoded as length-prefixed strings.
+</span><span style="color:#75715e"></span>  Slice a <span style="color:#f92672">=</span> GetLengthPrefixedSlice(aptr);
+  Slice b <span style="color:#f92672">=</span> GetLengthPrefixedSlice(bptr);
+  <span style="color:#66d9ef">return</span> comparator.Compare(a, b);
+}
+</code></pre></div><p><code>GetLengthPrefixedSlice</code>方法的目的就是从skiplist key里面获取到internal_key的值. 因为skiplist的头几个字节就是internal_key的长度, 通过GetVarint32Ptr, 可以解析出来internal_key的长度为len, 而且p指针已经移动到internal_key开始的地方, 那么直接用p和len获取internal_key就好了.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#66d9ef">static</span> Slice <span style="color:#a6e22e">GetLengthPrefixedSlice</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> data) {
+  <span style="color:#66d9ef">uint32_t</span> len;
+  <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> p <span style="color:#f92672">=</span> data;
+  p <span style="color:#f92672">=</span> GetVarint32Ptr(p, p <span style="color:#f92672">+</span> <span style="color:#ae81ff">5</span>, <span style="color:#f92672">&amp;</span>len);  <span style="color:#75715e">// +5: we assume &#34;p&#34; is not corrupted
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> Slice(p, len);
+}
+</code></pre></div><p>通过上面的讲解, 我们已经了解了Add方法的实现, 在看Get方法的实现之前, 我们还需要看一下Get方法的参数.</p>
+<p><code>bool Get(const LookupKey&amp; key, std::string* value, Status* s);</code></p>
+<p>这里面有一个LookupKey, 其实就是对user key和sequence number做了一层封装. 里面有几个实用的方法.</p>
+<p><img src="/images/leveldb_memtable/lookupkey_uml.png" alt="memtable"></p>
+<p>里面的几个方法其实看名字就知道是什么意思了, 这里我们只看看最重要的constructor</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">// LookupKey = | Size (int32变长) | User key (string) | sequence number (7 bytes) | value type (1 byte) |
+</span><span style="color:#75715e"></span>LookupKey<span style="color:#f92672">::</span>LookupKey(<span style="color:#66d9ef">const</span> Slice<span style="color:#f92672">&amp;</span> user_key, SequenceNumber s) {
+  size_t usize <span style="color:#f92672">=</span> user_key.size();
+  <span style="color:#75715e">// 为什么加13？因为8是SequenceNumber和 value type的长度，5是Size (int32变长)的最大长度
+</span><span style="color:#75715e"></span>  size_t needed <span style="color:#f92672">=</span> usize <span style="color:#f92672">+</span> <span style="color:#ae81ff">13</span>;  <span style="color:#75715e">// A conservative estimate
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> dst;
+  <span style="color:#75715e">// 默认最小使用大小为200的char数组来存LookupKey
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (needed <span style="color:#f92672">&lt;=</span> <span style="color:#66d9ef">sizeof</span>(space_)) {
+    dst <span style="color:#f92672">=</span> space_;
+  } <span style="color:#66d9ef">else</span> {
+    dst <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> <span style="color:#66d9ef">char</span>[needed];
+  }
+  <span style="color:#75715e">// LookupKey的起始位置
+</span><span style="color:#75715e"></span>  start_ <span style="color:#f92672">=</span> dst;
+  <span style="color:#75715e">// 把internalkey的长度转换成varint32并填充在size的位置
+</span><span style="color:#75715e"></span>  dst <span style="color:#f92672">=</span> EncodeVarint32(dst, usize <span style="color:#f92672">+</span> <span style="color:#ae81ff">8</span>);
+  <span style="color:#75715e">// size后面就是userkey的起始位置了, kstart_是user_key的起始位置
+</span><span style="color:#75715e"></span>  kstart_ <span style="color:#f92672">=</span> dst;
+  <span style="color:#75715e">// 拷贝user_key
+</span><span style="color:#75715e"></span>  memcpy(dst, user_key.data(), usize);
+  dst <span style="color:#f92672">+=</span> usize;
+  <span style="color:#75715e">// 转换sequence number和 type
+</span><span style="color:#75715e"></span>  EncodeFixed64(dst, PackSequenceAndType(s, kValueTypeForSeek));
+  dst <span style="color:#f92672">+=</span> <span style="color:#ae81ff">8</span>;
+  end_ <span style="color:#f92672">=</span> dst;
+}
+</code></pre></div><h4 id="get">Get</h4>
+<p>了解了LookupKey, 接下来我们来看看Memtable的Get方法</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">// Memtable读取操作
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">bool</span> MemTable<span style="color:#f92672">::</span>Get(<span style="color:#66d9ef">const</span> LookupKey<span style="color:#f92672">&amp;</span> key, std<span style="color:#f92672">::</span>string<span style="color:#f92672">*</span> value, Status<span style="color:#f92672">*</span> s) {
+  Slice memkey <span style="color:#f92672">=</span> key.memtable_key();
+  Table<span style="color:#f92672">::</span>Iterator iter(<span style="color:#f92672">&amp;</span>table_);
+  <span style="color:#75715e">// 之前讲解skiplist的iterator的时候有讲过, seek会把遍历器的指针移动到移动到比提供的key大的最近的节点上.
+</span><span style="color:#75715e"></span>  iter.Seek(memkey.data());
+  <span style="color:#66d9ef">if</span> (iter.Valid()) {
+    <span style="color:#75715e">// entry format is:
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//    klength  varint32
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//    userkey  char[klength]
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//    tag      uint64
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//    vlength  varint32
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//    value    char[vlength]
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// Check that it belongs to same user key.  We do not check the
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// sequence number since the Seek() call above should have skipped
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// all entries with overly large sequence numbers.
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// entry是memtable_key加memtable_value, 因为skiplist里面排序是按照internal_key来排序的, 所以这里已经确保了, 获取到的entry里面,
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// 即使user_key一样, sequence也是更高的, 意味着更新的修改.
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> entry <span style="color:#f92672">=</span> iter.key();
+    <span style="color:#75715e">// internal_key_length
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint32_t</span> key_length;
+    <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> key_ptr <span style="color:#f92672">=</span> GetVarint32Ptr(entry, entry <span style="color:#f92672">+</span> <span style="color:#ae81ff">5</span>, <span style="color:#f92672">&amp;</span>key_length);
+    <span style="color:#75715e">// 确保获取到的internal_key里的user_key和传入的lookup_key里的user_key相等
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (comparator_.comparator.user_comparator()<span style="color:#f92672">-&gt;</span>Compare(
+            Slice(key_ptr, key_length <span style="color:#f92672">-</span> <span style="color:#ae81ff">8</span>), key.user_key()) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
+      <span style="color:#75715e">// Correct user key
+</span><span style="color:#75715e"></span>      <span style="color:#75715e">// tag = sequence number + type
+</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">uint64_t</span> tag <span style="color:#f92672">=</span> DecodeFixed64(key_ptr <span style="color:#f92672">+</span> key_length <span style="color:#f92672">-</span> <span style="color:#ae81ff">8</span>);
+      <span style="color:#66d9ef">switch</span> (<span style="color:#66d9ef">static_cast</span><span style="color:#f92672">&lt;</span>ValueType<span style="color:#f92672">&gt;</span>(tag <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">0xff</span>)) {
+        <span style="color:#66d9ef">case</span> kTypeValue: {
+          <span style="color:#75715e">// 说明这个entry记录的是插入操作, 可以读取里面的value. key_ptr指向的是internal_key的起始点, 所以key_ptr + key_length
+</span><span style="color:#75715e"></span>          <span style="color:#75715e">// 就是memtable_value的起始点了, 然后用GetLengthPrefixedSlice就可以获取到value的值
+</span><span style="color:#75715e"></span>          Slice v <span style="color:#f92672">=</span> GetLengthPrefixedSlice(key_ptr <span style="color:#f92672">+</span> key_length);
+          value<span style="color:#f92672">-&gt;</span>assign(v.data(), v.size());
+          <span style="color:#66d9ef">return</span> true;
+        }
+        <span style="color:#66d9ef">case</span> kTypeDeletion:
+          <span style="color:#75715e">// 如果是删除, 说明key已经被删除了, 就返回NotFound
+</span><span style="color:#75715e"></span>          <span style="color:#f92672">*</span>s <span style="color:#f92672">=</span> Status<span style="color:#f92672">::</span>NotFound(Slice());
+          <span style="color:#66d9ef">return</span> true;
+      }
+    }
+  }
+  <span style="color:#75715e">// false表示遍历器不合法, 我理解是skiplist为空或者其他未知错误的时候
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> false;
+}
+</code></pre></div>
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>Author:</span>
+                <span>Atwood.Wang </span>
+                </p>
+            
+           
+             
+            <p class="copyright-item">
+                    <span>Link:</span>
+                    <a href=http://atwoodwang.com/2020/leveldb_memtable/>http://atwoodwang.com/2020/leveldb_memtable/</span>
+            </p>
+            
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+            <section>
+            <i class="iconfont icon-tag"></i>Tag(s): 
+            
+            <span class="tag"><a href="http://atwoodwang.com/tags/leveldb/">
+                    #LevelDB</a></span>
+            
+            <span class="tag"><a href="http://atwoodwang.com/tags/databases/">
+                    #Databases</a></span>
+            
+            <span class="tag"><a href="http://atwoodwang.com/tags/c&#43;&#43;/">
+                    #C&#43;&#43;</a></span>
+            
+            <span class="tag"><a href="http://atwoodwang.com/tags/%E6%95%B0%E6%8D%AE%E5%BC%95%E6%93%8E/">
+                    #数据引擎</a></span>
+            
+            </section>
+        
+        <section>
+                <a href="javascript:window.history.back();">back</a></span> · 
+                <span><a href="http://atwoodwang.com/">home</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="http://atwoodwang.com/2020/leveldb_skiplist/" class="prev" rel="prev" title="深入浅出 LevelDB (3) - SkipList 跳跃链表"><i class="iconfont icon-left"></i>&nbsp;深入浅出 LevelDB (3) - SkipList 跳跃链表</a>
+         
+        
+    </div>
+
+    <div class="post-comment">
+          
+                 
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2020 - 2020</span>
+        
+        <span class="with-love">
+    	 <i class="iconfont icon-love"></i> 
+         </span>
+         
+            <span class="author" itemprop="copyrightHolder"><a href="http://atwoodwang.com/">Atwood.Wang</a> | </span> 
+         
+
+         
+		  <span>Powered by <a href="https://gohugo.io/" target="_blank" rel="external nofollow">Hugo</a> & <a href="https://github.com/liuzc/leaveit" target="_blank" rel="external nofollow">LeaveIt</a></span> 
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+     <link href="//lib.baomitu.com/lightgallery/1.6.11/css/lightgallery.min.css" rel="stylesheet">  
+      
+     <script src="/js/vendor_gallery.min.js" async="" ></script>
+    
+  
+
+
+
+     </div>
+  </body>
+</html>
