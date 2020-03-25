@@ -7,7 +7,7 @@ paginate = 10
 enableEmoji = true
 enableRobotsTXT = true
 googleAnalytics = ""
-
+hasCJKLanguage = true
 preserveTaxonomyNames = true
 
 [blackfriday]
