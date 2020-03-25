@@ -46,7 +46,7 @@
     "articleSection" : "posts",
     "name" : "深入浅出 LevelDB (2) - Arena 内存池",
     "headline" : "深入浅出 LevelDB (2) - Arena 内存池",
-    "description" : "Arena 内存池 内存池的存在主要就是减少malloc或者new调用的次数, 较少内存分配所带来的系统开销, 提升性能.\nLevelDB里自己实现了一个内存池, 它的做法是, 先向系统申请一块大的内存, 程序里需要申请内存时, 先把已有的内存块分配给用户, 如果不够用则再申请一块大的内存. 当内存池对象析构时, 分配的内存均被释放, 保证了内存不会泄漏.\nArena以block为单位来管理内存, 每个block的大小为4096KB.\n先来看Arena类的结构\n再来看具体的内部实现\nAllocate inline char* Arena::Allocate(size_t bytes) { \/\/ The semantics of what to return are a bit messy if we allow  \/\/ 0-byte allocations, so we disallow them here (we don\x26#39;t need  \/\/ them for our internal use). 最少也得申请一个byte  assert(bytes \x26gt; 0); \/\/ 如果需要的内存小于剩余内存, 直接分配, 并且返回指针  if (bytes \x26lt;= alloc_bytes_remaining_) { \/\/ 先保存当前指针偏移量, 用来返回  char* result = alloc_ptr_; \/\/ 增加指针偏移量, 为下次分配的起始点  alloc_ptr_ \x2b= bytes; \/\/ 剩余内存减少  alloc_bytes_remaining_ -= bytes; return result; } return AllocateFallback(bytes); } 可以看到, 如果当前block的剩余内存大于需要分配的内存, 直接分配即可, 如果当前block大小不够, 则进入AllocateFallback方法",
+    "description" : "Arena 内存池 内存池的存在主要就是减少malloc或者new调用的次数, 较少内存分配所带来的系统开销, 提升性能. LevelDB里自己实现了一个内存",
     "inLanguage" : "zh-cn",
     "author" : "Atwood",
     "creator" : "Atwood",
@@ -57,7 +57,7 @@
     "datePublished": "2020-03-21 00:00:00 \x2b0000 UTC",
     "dateModified" : "2020-03-21 00:00:00 \x2b0000 UTC",
     "url" : "http:\/\/atwoodwang.com\/2020\/leveldb_arena\/",
-    "wordCount" : "337",
+    "wordCount" : "1262",
     "keywords" : [ "LevelDB","Databases","C\x2b\x2b","数据引擎", "Atwood\x27s Blog"]
 }
 </script>
@@ -114,6 +114,7 @@
     	 <main class="main">
           <div class="container">
       		
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <article class="post-warp" itemscope itemtype="http://schema.org/Article">
     <header class="post-header">
         <h1 class="post-title" itemprop="name headline">深入浅出 LevelDB (2) - Arena 内存池</h1>
@@ -128,6 +129,10 @@
                         <a href="http://atwoodwang.com/categories/release/"> Release </a>
                         
                 </span>
+            <span class="post-word-count">, 1262 words</span>
+            <span id="busuanzi_container_page_pv">
+                , 本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+            </span>
         </div>
     </header>
     <div class="post-content">

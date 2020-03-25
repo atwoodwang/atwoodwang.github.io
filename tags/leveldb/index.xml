@@ -17,12 +17,7 @@
       <pubDate>Mon, 23 Mar 2020 00:00:00 +0000</pubDate>
       
       <guid>http://atwoodwang.com/2020/leveldb_memtable/</guid>
-      <description>Memtable Memtable是LevelDB的一个重要组成部分, 我们再回顾一篇LevelDB的架构.
-在用户写入数据时, 首先会写入WAL文件(这个后面再讲), 然后就会写入到内存中的memtable里, 当memtable数据达到一定大小时, 会变为immutable的memtable, immutable的memtable只可读不可写, 同时LevelDB会开启一个新的memtable接受新的写入. Immutable的memtable会被后台线程异步的刷新到磁盘上, 变成SST文件, 这就是LevelDB数据持久化的步骤.
-Memtable其实是对skiplist的一层封装, 因为用户的数据在内存中是保存在skiplist里的, 在我们对memtable进行读写时, 底层操作的实际上就是skiplist.
-Memtable结构 现在我们来看看Memtable的结构:
-不难看出Memtable里最核心的方法就是Add和Get, 分别是往内存中写数据和读数据. 但是读者可能会感觉一脸懵逼, 为什么Add方法里的参数看起来这么奇怪? SequenceNumber, ValueType, Slice都是什么? 别急, 我会一个一个解释.
- SequenceNumber: 在LevelDB中, 每个键值对都是有一个版本的. 在我们更新某一个key的值时, 并不会直接覆盖掉之前的值, 而是为这个key创建一个新的版本. 这样设计的理由是因为LevelDB支持snapshot, 所以需要保留旧的键值信息. 所以在插入和读取数据时, 都需要提供一个版本号, 这个版本号的生成会在以后更上层的逻辑里面讲 ValueType: 这是一个enum, 对应着一个字节. 如果为0, 代表这一次记录是删除操作, 如果为1, 代表这一条记录为插入或者更新. Slice: 这个其实就是LevelDB中自己实现了一个string的类, 提供了一些有用的方法. 在阅读源码时可以把它就当做一般的string来看待. 比如key和value都是string类型.  现在我们知道了插入需要提供的参数有版本号, 类型, 键还有值, 那么我们就可以理解具体在memtable里, 用户传入的键值对是怎么存储的了. 为了防止混淆, 以后我们把用户在读写操作时传入的key叫做user key, 传入的值叫做user value. 之前在看skiplist源码的时候我就有一个疑问, 为什么skiplist里插入的时候只需要传入key呢, 数据库存的因该是键值对, 如果skiplist只存了user key, 那么user value存哪里呢? 后来看了memtable才知道, 原来将数据存入skiplist时, 传入的key并不是用户在进行写操作时传入的user key, 而是已经把user key, user value, sequence number 等等信息打包好编码好以后生成的一个复合key.</description>
+      <description>Memtable Memtable是LevelDB的一个重要组成部分, 我们再回顾一篇LevelDB的架构. 在用户写入数据时, 首先会写入WAL文件(这个后面再</description>
     </item>
     
     <item>
@@ -31,17 +26,7 @@ Memtable结构 现在我们来看看Memtable的结构:
       <pubDate>Mon, 23 Mar 2020 00:00:00 +0000</pubDate>
       
       <guid>http://atwoodwang.com/2020/leveldb_sst/</guid>
-      <description>SST 文件 上一篇我们提到, 当memtable的大小达到一定的阈值, 会变为immutable memtable, 然后由后台线程异步刷新到磁盘上. LevelDB里的数据在磁盘上就是以SST文件的格式存储的. 最新版本的SSTable文件名后缀为ldb, 同时保留了sst后缀的兼容. 这一节我们就来看看SST文件相关的实现.
-在LevelDB源码的doc文件夹下有关于sst文件的文档table_format.txt, 里面介绍了sst文件的设计和结构.
-这里, 我先放一张自己制作的图, 看看SSTable文件的整体结构:
-第一眼看上去会觉得十分复杂, 但是没关系, 我会一步一步的把这个图拆解开来逐个解释.
-Record 记录 首先, 让我们从基础开始讲起. 在上图的右上角, 我们可以看到一个一个的record. 其实代表的就是用户插入的一个一个键值对, 它的结构放大来看是这样:
-我们上一节讲到, skiplist里面保存的每一个节点的格式是memtable_key+memtable_value, 所以每个节点里都保存有user key的全部信息. 但是实际上, 对于相邻的节点, user key有较大几率是有一定重合的. 所以在把数据保存到磁盘上的sst文件的时候, 为了节省空间, LevelDB对user key利用相同的前缀做了一定的压缩.
-每一条记录有 key共享长度 ＋ key非共享长度＋ value长度 ＋ key非共享内容 + value内容组成. 两条记录如果user key有相同的部分, 那么第二条记录可以和第一条共享相同的前缀.
-比如我们有两条记录需要保存. 第一条记录为hello_world:9，第二条记录为hello_you:18.
-那么第一条记录存储格式为:
-0 + 11 + 1 + hello_world + 9
-0是因为默认第一条记录的共享长度为0. 11是&amp;quot;hello_world&amp;quot;的长度, 因为第一条记录没有共享前缀, 所以非共享的长度就是key的整个长度. 1是第一条记录的value在varint编码下会占用的字节长度. 因为没有共享, 所以最后两个部分就是完整的user key和user value.</description>
+      <description>SST 文件 上一篇我们提到, 当memtable的大小达到一定的阈值, 会变为immutable memtable, 然后由后台线程异步刷新到磁盘上. LevelDB里的数</description>
     </item>
     
     <item>
@@ -50,17 +35,7 @@ Record 记录 首先, 让我们从基础开始讲起. 在上图的右上角, 我
       <pubDate>Sun, 22 Mar 2020 00:00:00 +0000</pubDate>
       
       <guid>http://atwoodwang.com/2020/leveldb_skiplist/</guid>
-      <description>Skiplist 介绍 上一篇我们提到, LevelDB中的数据是按照key的值进行有序存储的. LevelDB在内存中存储数据的区域称为memtable, 这个memtable底层是用跳跃链表skiplist来实现的. redis内部也采用跳跃链表来实现有序链表.
-Skiplist的效率可以和AVL树, 红黑树媲美, 平均O(logN), 最坏O(N)的查询效率, 但是用Skiplist实现比平衡树实现简单许多, 所以很多程序用跳跃链表来代替平衡树.
-Skiplist简单来说就是一个多层的单向链表, 是对一般我们所说的单向链表的补充.
-这是一个单向链表, 如果我们想查找一个元素的话, 只能从头找到尾, 需要整个遍历一次, 时间为O(N)
-如果是说链表是排序的, 并且节点中还存储了指向前面第二个节点的指针的话, 那么在查找一个节点时, 仅仅需要遍历N/2个节点即可. 这就是跳跃链表的核心, 利用不同节点间跳跃的指针, 来优化搜索的时间.
-比如这个例子, 如果我们想搜索7, 比起单链表的从3到4到7, 在跳跃链表中, 我们从最高(最稀疏)层开始向下寻找, 直接可以通过4这个节点找到7. 如果我们想找寻14, 则通过12节点, 两步就可以搜索到了.
-对于一个跳跃链表, 最下层就相当于一个普通的单向链表, 所有节点依次相连, 随着层数的增加, 每层里面的节点数逐渐减少. 搜索的时候, 从最高层开始寻找. 因为节点是有序的, 所以在搜索中一次就可以跨越多个无效节点, 大大节省时间.
-源码分析 下面我们进入万众期待的源码分析环节!! 撒花~~
-Node Skiplist数据结构在源码的skiplist.h文件里, 本身是一个类. 在看skiplist类本身之前, 我们先看看skiplist里面节点的定义.
-Node结构里面主要有两个成员:
- key: 这个是skiplist节点的Key, 这个名字可能会比较让人迷惑, 因为LevelDB是一个键值数据库, 用户的插入操作会包含key和value, 第一次看这个部分的时候, 我一直在想node里面如果只存了key, 那用户传入的value存在哪里呢? 后来看了后面的代码才发现, Node的里面这个key, 和我们理解的用户插入的key, 是不一样的. 他实际上是包含了用户插入的键和值一起. 这里面具体的编码格式我们后面再说. std::atomic&amp;lt;Node*&amp;gt; next_[1]: 这是一个数组, 里面保存着当前节点下一点的指针.</description>
+      <description>Skiplist 介绍 上一篇我们提到, LevelDB中的数据是按照key的值进行有序存储的. LevelDB在内存中存储数据的区域称为memtable, 这个m</description>
     </item>
     
     <item>
@@ -69,15 +44,7 @@ Node结构里面主要有两个成员:
       <pubDate>Sun, 22 Mar 2020 00:00:00 +0000</pubDate>
       
       <guid>http://atwoodwang.com/2020/leveldb_varint/</guid>
-      <description>Varint 编码 在深入到memtable之前, 我们还需要了解一个在LevelDB中广泛使用的一个编码格式: Varint (variable integer). 它是一种使用一个或多个字节序列化整数的方法, 会把整数编码为变长字节. 通常一个整数需要占用32个bit, 即4个字节. 如果我们只需要存储很小的数的时候, 用4个字节存储是很浪费的. 通过Varint编码, 小的数字只需要1个byte就可以保存, 大的数字使用5个bytes. 虽然极端条件下overhead有点大, 需要5个字节, 但是实际场景下小数字的使用率远远多于大数字, 所以用Varint在大部分的情况下都可以起到很好的压缩效果.
-Varint 原理 Varint编码中, 除了最后一个字节外, 每个字节都设置了最高有效位（most significant bit - msb). msb为1则表明后面的字节还是属于当前数据的, 如果是0那么这是当前数据的最后一个字节数据. 每个字节的低7位用于以7位为一组存储数字的二进制补码表示, 最低有效组在前, 或者叫最低有效字节在前, 因为varint编码后数据的字节是按照小端序(Little Endian)排列的.
-我们来通过解码一个varint的数据来熟悉varint编码的原理.
-比如整数1, 在varint编码后只需要一个字节, 为:
-0000 0001
-第一位为0, 表示这个字节已经是当前数据的最后一个字节了, 后面7位二进制位000 0001, 代表1. 所以这个数为1.
-再举一个例子, 300在varint编码后需要2个字节, 为:
-1010 1100 0000 0010
-先看第一个字节, 最高位为1, 代表后面一个字节也是当前数据的一部分. 然后看第二个字节, 最高位为0, 代表这个字节是当前数据的最后一个字节. 所以我们知道, 这个数据一共占用了两个字节. 然后把每个字节的最高位去掉, 分别为010 1100和000 0010. 因为存储是用小端存储的, 所以在解码时, 最低有效组应该在前面, 所以两个字节拼在一起是000 0010 010 1100, 即 100101100.</description>
+      <description>Varint 编码 在深入到memtable之前, 我们还需要了解一个在LevelDB中广泛使用的一个编码格式: Varint (variable integer). 它是一种使用一个或多个字节序列化整数的</description>
     </item>
     
     <item>
@@ -86,12 +53,7 @@ Varint 原理 Varint编码中, 除了最后一个字节外, 每个字节都设�
       <pubDate>Sat, 21 Mar 2020 00:00:00 +0000</pubDate>
       
       <guid>http://atwoodwang.com/2020/leveldb_arena/</guid>
-      <description>Arena 内存池 内存池的存在主要就是减少malloc或者new调用的次数, 较少内存分配所带来的系统开销, 提升性能.
-LevelDB里自己实现了一个内存池, 它的做法是, 先向系统申请一块大的内存, 程序里需要申请内存时, 先把已有的内存块分配给用户, 如果不够用则再申请一块大的内存. 当内存池对象析构时, 分配的内存均被释放, 保证了内存不会泄漏.
-Arena以block为单位来管理内存, 每个block的大小为4096KB.
-先来看Arena类的结构
-再来看具体的内部实现
-Allocate inline char* Arena::Allocate(size_t bytes) { // The semantics of what to return are a bit messy if we allow  // 0-byte allocations, so we disallow them here (we don&amp;#39;t need  // them for our internal use). 最少也得申请一个byte  assert(bytes &amp;gt; 0); // 如果需要的内存小于剩余内存, 直接分配, 并且返回指针  if (bytes &amp;lt;= alloc_bytes_remaining_) { // 先保存当前指针偏移量, 用来返回  char* result = alloc_ptr_; // 增加指针偏移量, 为下次分配的起始点  alloc_ptr_ += bytes; // 剩余内存减少  alloc_bytes_remaining_ -= bytes; return result; } return AllocateFallback(bytes); } 可以看到, 如果当前block的剩余内存大于需要分配的内存, 直接分配即可, 如果当前block大小不够, 则进入AllocateFallback方法</description>
+      <description>Arena 内存池 内存池的存在主要就是减少malloc或者new调用的次数, 较少内存分配所带来的系统开销, 提升性能. LevelDB里自己实现了一个内存</description>
     </item>
     
     <item>
@@ -100,11 +62,7 @@ Allocate inline char* Arena::Allocate(size_t bytes) { // The semantics of what t
       <pubDate>Fri, 20 Mar 2020 00:00:00 +0000</pubDate>
       
       <guid>http://atwoodwang.com/2020/leveldb_intro/</guid>
-      <description>Intro 根据LevelDB官方介绍:
- LevelDB is a fast key-value storage library written at Google that provides an ordered mapping from string keys to string values.
- LevelDB是一个可持久化的KV数据库引擎，是大名鼎鼎的BigTable论文中描述的键值存储系统的单机版的实现, 它提供了一个极其高速的键值存储系统，并且由 Bigtable 的作者, Google传奇工程师Jeff Dean和Sanjay Ghemawat开发并开源。
-主要特点如下:
- Keys and values are arbitrary byte arrays. 键和值都是任意长度的字节数组 Data is stored sorted by key. 内部存储是键值对的形式, 默认是按照键值的字典序进行排序. Callers can provide a custom comparison function to override the sort order. 用户可以提供自定义的排序方式 The basic operations are Put(key,value), Get(key), Delete(key). 提供基本操作接口, put(), get(), delete() Multiple changes can be made in one atomic batch.</description>
+      <description>Intro 根据LevelDB官方介绍: LevelDB is a fast key-value storage library written at Google that provides an ordered mapping from string keys to string values. LevelDB是一个可持久化的KV数据库引擎，是大名鼎鼎的BigTa</description>
     </item>
     
   </channel>

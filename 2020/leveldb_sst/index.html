@@ -46,7 +46,7 @@
     "articleSection" : "posts",
     "name" : "深入浅出 LevelDB (6) - SST文件",
     "headline" : "深入浅出 LevelDB (6) - SST文件",
-    "description" : "SST 文件 上一篇我们提到, 当memtable的大小达到一定的阈值, 会变为immutable memtable, 然后由后台线程异步刷新到磁盘上. LevelDB里的数据在磁盘上就是以SST文件的格式存储的. 最新版本的SSTable文件名后缀为ldb, 同时保留了sst后缀的兼容. 这一节我们就来看看SST文件相关的实现.\n在LevelDB源码的doc文件夹下有关于sst文件的文档table_format.txt, 里面介绍了sst文件的设计和结构.\n这里, 我先放一张自己制作的图, 看看SSTable文件的整体结构:\n第一眼看上去会觉得十分复杂, 但是没关系, 我会一步一步的把这个图拆解开来逐个解释.\nRecord 记录 首先, 让我们从基础开始讲起. 在上图的右上角, 我们可以看到一个一个的record. 其实代表的就是用户插入的一个一个键值对, 它的结构放大来看是这样:\n我们上一节讲到, skiplist里面保存的每一个节点的格式是memtable_key\x2bmemtable_value, 所以每个节点里都保存有user key的全部信息. 但是实际上, 对于相邻的节点, user key有较大几率是有一定重合的. 所以在把数据保存到磁盘上的sst文件的时候, 为了节省空间, LevelDB对user key利用相同的前缀做了一定的压缩.\n每一条记录有 key共享长度 ＋ key非共享长度＋ value长度 ＋ key非共享内容 \x2b value内容组成. 两条记录如果user key有相同的部分, 那么第二条记录可以和第一条共享相同的前缀.\n比如我们有两条记录需要保存. 第一条记录为hello_world:9，第二条记录为hello_you:18.\n那么第一条记录存储格式为:\n0 \x2b 11 \x2b 1 \x2b hello_world \x2b 9\n0是因为默认第一条记录的共享长度为0. 11是\x26quot;hello_world\x26quot;的长度, 因为第一条记录没有共享前缀, 所以非共享的长度就是key的整个长度. 1是第一条记录的value在varint编码下会占用的字节长度. 因为没有共享, 所以最后两个部分就是完整的user key和user value.",
+    "description" : "SST 文件 上一篇我们提到, 当memtable的大小达到一定的阈值, 会变为immutable memtable, 然后由后台线程异步刷新到磁盘上. LevelDB里的数",
     "inLanguage" : "zh-cn",
     "author" : "Atwood",
     "creator" : "Atwood",
@@ -57,7 +57,7 @@
     "datePublished": "2020-03-23 00:00:00 \x2b0000 UTC",
     "dateModified" : "2020-03-23 00:00:00 \x2b0000 UTC",
     "url" : "http:\/\/atwoodwang.com\/2020\/leveldb_sst\/",
-    "wordCount" : "1046",
+    "wordCount" : "6088",
     "keywords" : [ "LevelDB","Databases","C\x2b\x2b","数据引擎", "Atwood\x27s Blog"]
 }
 </script>
@@ -114,6 +114,7 @@
     	 <main class="main">
           <div class="container">
       		
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <article class="post-warp" itemscope itemtype="http://schema.org/Article">
     <header class="post-header">
         <h1 class="post-title" itemprop="name headline">深入浅出 LevelDB (6) - SST文件</h1>
@@ -128,6 +129,10 @@
                         <a href="http://atwoodwang.com/categories/release/"> Release </a>
                         
                 </span>
+            <span class="post-word-count">, 6088 words</span>
+            <span id="busuanzi_container_page_pv">
+                , 本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+            </span>
         </div>
     </header>
     <div class="post-content">

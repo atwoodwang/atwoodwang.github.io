@@ -46,7 +46,7 @@
     "articleSection" : "posts",
     "name" : "深入浅出 LevelDB (5) - Memtable 内存表",
     "headline" : "深入浅出 LevelDB (5) - Memtable 内存表",
-    "description" : "Memtable Memtable是LevelDB的一个重要组成部分, 我们再回顾一篇LevelDB的架构.\n在用户写入数据时, 首先会写入WAL文件(这个后面再讲), 然后就会写入到内存中的memtable里, 当memtable数据达到一定大小时, 会变为immutable的memtable, immutable的memtable只可读不可写, 同时LevelDB会开启一个新的memtable接受新的写入. Immutable的memtable会被后台线程异步的刷新到磁盘上, 变成SST文件, 这就是LevelDB数据持久化的步骤.\nMemtable其实是对skiplist的一层封装, 因为用户的数据在内存中是保存在skiplist里的, 在我们对memtable进行读写时, 底层操作的实际上就是skiplist.\nMemtable结构 现在我们来看看Memtable的结构:\n不难看出Memtable里最核心的方法就是Add和Get, 分别是往内存中写数据和读数据. 但是读者可能会感觉一脸懵逼, 为什么Add方法里的参数看起来这么奇怪? SequenceNumber, ValueType, Slice都是什么? 别急, 我会一个一个解释.\n SequenceNumber: 在LevelDB中, 每个键值对都是有一个版本的. 在我们更新某一个key的值时, 并不会直接覆盖掉之前的值, 而是为这个key创建一个新的版本. 这样设计的理由是因为LevelDB支持snapshot, 所以需要保留旧的键值信息. 所以在插入和读取数据时, 都需要提供一个版本号, 这个版本号的生成会在以后更上层的逻辑里面讲 ValueType: 这是一个enum, 对应着一个字节. 如果为0, 代表这一次记录是删除操作, 如果为1, 代表这一条记录为插入或者更新. Slice: 这个其实就是LevelDB中自己实现了一个string的类, 提供了一些有用的方法. 在阅读源码时可以把它就当做一般的string来看待. 比如key和value都是string类型.  现在我们知道了插入需要提供的参数有版本号, 类型, 键还有值, 那么我们就可以理解具体在memtable里, 用户传入的键值对是怎么存储的了. 为了防止混淆, 以后我们把用户在读写操作时传入的key叫做user key, 传入的值叫做user value. 之前在看skiplist源码的时候我就有一个疑问, 为什么skiplist里插入的时候只需要传入key呢, 数据库存的因该是键值对, 如果skiplist只存了user key, 那么user value存哪里呢? 后来看了memtable才知道, 原来将数据存入skiplist时, 传入的key并不是用户在进行写操作时传入的user key, 而是已经把user key, user value, sequence number 等等信息打包好编码好以后生成的一个复合key.",
+    "description" : "Memtable Memtable是LevelDB的一个重要组成部分, 我们再回顾一篇LevelDB的架构. 在用户写入数据时, 首先会写入WAL文件(这个后面再",
     "inLanguage" : "zh-cn",
     "author" : "Atwood",
     "creator" : "Atwood",
@@ -57,7 +57,7 @@
     "datePublished": "2020-03-23 00:00:00 \x2b0000 UTC",
     "dateModified" : "2020-03-23 00:00:00 \x2b0000 UTC",
     "url" : "http:\/\/atwoodwang.com\/2020\/leveldb_memtable\/",
-    "wordCount" : "661",
+    "wordCount" : "3406",
     "keywords" : [ "LevelDB","Databases","C\x2b\x2b","数据引擎", "Atwood\x27s Blog"]
 }
 </script>
@@ -114,6 +114,7 @@
     	 <main class="main">
           <div class="container">
       		
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <article class="post-warp" itemscope itemtype="http://schema.org/Article">
     <header class="post-header">
         <h1 class="post-title" itemprop="name headline">深入浅出 LevelDB (5) - Memtable 内存表</h1>
@@ -128,6 +129,10 @@
                         <a href="http://atwoodwang.com/categories/release/"> Release </a>
                         
                 </span>
+            <span class="post-word-count">, 3406 words</span>
+            <span id="busuanzi_container_page_pv">
+                , 本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+            </span>
         </div>
     </header>
     <div class="post-content">

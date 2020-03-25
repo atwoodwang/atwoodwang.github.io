@@ -46,7 +46,7 @@
     "articleSection" : "posts",
     "name" : "深入浅出 LevelDB (3) - SkipList 跳跃链表",
     "headline" : "深入浅出 LevelDB (3) - SkipList 跳跃链表",
-    "description" : "Skiplist 介绍 上一篇我们提到, LevelDB中的数据是按照key的值进行有序存储的. LevelDB在内存中存储数据的区域称为memtable, 这个memtable底层是用跳跃链表skiplist来实现的. redis内部也采用跳跃链表来实现有序链表.\nSkiplist的效率可以和AVL树, 红黑树媲美, 平均O(logN), 最坏O(N)的查询效率, 但是用Skiplist实现比平衡树实现简单许多, 所以很多程序用跳跃链表来代替平衡树.\nSkiplist简单来说就是一个多层的单向链表, 是对一般我们所说的单向链表的补充.\n这是一个单向链表, 如果我们想查找一个元素的话, 只能从头找到尾, 需要整个遍历一次, 时间为O(N)\n如果是说链表是排序的, 并且节点中还存储了指向前面第二个节点的指针的话, 那么在查找一个节点时, 仅仅需要遍历N\/2个节点即可. 这就是跳跃链表的核心, 利用不同节点间跳跃的指针, 来优化搜索的时间.\n比如这个例子, 如果我们想搜索7, 比起单链表的从3到4到7, 在跳跃链表中, 我们从最高(最稀疏)层开始向下寻找, 直接可以通过4这个节点找到7. 如果我们想找寻14, 则通过12节点, 两步就可以搜索到了.\n对于一个跳跃链表, 最下层就相当于一个普通的单向链表, 所有节点依次相连, 随着层数的增加, 每层里面的节点数逐渐减少. 搜索的时候, 从最高层开始寻找. 因为节点是有序的, 所以在搜索中一次就可以跨越多个无效节点, 大大节省时间.\n源码分析 下面我们进入万众期待的源码分析环节!! 撒花~~\nNode Skiplist数据结构在源码的skiplist.h文件里, 本身是一个类. 在看skiplist类本身之前, 我们先看看skiplist里面节点的定义.\nNode结构里面主要有两个成员:\n key: 这个是skiplist节点的Key, 这个名字可能会比较让人迷惑, 因为LevelDB是一个键值数据库, 用户的插入操作会包含key和value, 第一次看这个部分的时候, 我一直在想node里面如果只存了key, 那用户传入的value存在哪里呢? 后来看了后面的代码才发现, Node的里面这个key, 和我们理解的用户插入的key, 是不一样的. 他实际上是包含了用户插入的键和值一起. 这里面具体的编码格式我们后面再说. std::atomic\x26lt;Node*\x26gt; next_[1]: 这是一个数组, 里面保存着当前节点下一点的指针.",
+    "description" : "Skiplist 介绍 上一篇我们提到, LevelDB中的数据是按照key的值进行有序存储的. LevelDB在内存中存储数据的区域称为memtable, 这个m",
     "inLanguage" : "zh-cn",
     "author" : "Atwood",
     "creator" : "Atwood",
@@ -57,7 +57,7 @@
     "datePublished": "2020-03-22 00:00:00 \x2b0000 UTC",
     "dateModified" : "2020-03-22 00:00:00 \x2b0000 UTC",
     "url" : "http:\/\/atwoodwang.com\/2020\/leveldb_skiplist\/",
-    "wordCount" : "936",
+    "wordCount" : "3557",
     "keywords" : [ "LevelDB","Databases","C\x2b\x2b","数据引擎", "Atwood\x27s Blog"]
 }
 </script>
@@ -114,6 +114,7 @@
     	 <main class="main">
           <div class="container">
       		
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <article class="post-warp" itemscope itemtype="http://schema.org/Article">
     <header class="post-header">
         <h1 class="post-title" itemprop="name headline">深入浅出 LevelDB (3) - SkipList 跳跃链表</h1>
@@ -128,6 +129,10 @@
                         <a href="http://atwoodwang.com/categories/release/"> Release </a>
                         
                 </span>
+            <span class="post-word-count">, 3557 words</span>
+            <span id="busuanzi_container_page_pv">
+                , 本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+            </span>
         </div>
     </header>
     <div class="post-content">
