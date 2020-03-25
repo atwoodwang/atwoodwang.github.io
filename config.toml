@@ -62,3 +62,16 @@ preserveTaxonomyNames = true
     Email   = "atwoodwang0918@outlook.com"
     #Wechat = "/images/me/wechat.png"  # Wechat QRcode image
     #Facebook = "xxoo"
+
+# Valine.
+# You can get your appid and appkey from https://leancloud.cn
+# more info please open https://valine.js.org
+[params.valine]
+    enable = true
+    appId = 'wySGNUOF6cNnLVFKGInBp0cp-gzGzoHsz'
+    appKey = '6MfkPR7goSI8nAVL7Evutvf0'
+    notify = false  # mail notifier , https://github.com/xCss/Valine/wiki
+    verify = false # Verification code
+    avatar = 'mp'
+    placeholder = '来呀, 唠嗑啊~'
+    visitor = false
