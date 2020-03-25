@@ -194,3 +194,4 @@ bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {
 }
 ```
 
+本篇内容的详细源码可看[leveldb/db/memtable.h](https://github.com/google/leveldb/blob/master/db/memtable.h) 和 [leveldb/db/memtable.cc](https://github.com/google/leveldb/blob/master/db/memtable.cc)

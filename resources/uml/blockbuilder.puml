@@ -1,0 +1,15 @@
+@startuml
+class BlockBuilder {
+  -const Options* options_; // 定义了一些配置, 比如每隔多少条记录添加一个restart point或者每个block的大小
+  -std::string buffer_; // 这个块的所有数据，数据一条一条添加到这个string中
+  -std::vector<uint32_t> restarts_; // 存储每一个Restart point
+  -int counter_; // 自上个重启点起, 记录的条数
+  -bool finished_; // 是否finish方法已经被调用, 即这个block已经关闭
+  -std::string last_key_; // 每次写记录时的上一条记录, 用来判断共享的前缀长度
+  +void Reset(); // 重置block
+  +void Add(const Slice& key, const Slice& value); // 往当前块增加一条记录
+  +Slice Finish(); // 当前块写结束, 返回这个块的所有内容
+  +size_t CurrentSizeEstimate() const; // 估计这个块的数据量, 用于判断当前块是否大于option当中定义block大小
+  +bool empty(); // block是否为空
+}
+@enduml

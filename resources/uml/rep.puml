@@ -1,0 +1,24 @@
+@startuml
+class Rep {
+  Options options; // 配置的参数
+  Options index_block_options; // index block的配置参数
+  WritableFile* file; // sst文件封装类
+  uint64_t offset; // sst文件的偏移量, 每写一个块就刷新一次
+  Status status; // 类的操作状态
+  BlockBuilder data_block; // 写数据块的类
+  BlockBuilder index_block; // 写index块的类
+  std::string last_key; // 当前已经写入的最后一个key
+  int64_t num_entries; // 当前sst文件里一共的记录数
+  bool closed;  // 是否sst文件已经关闭
+  FilterBlockBuilder* filter_block;
+
+  // 当pending_index_entry为空时, 证明上一个block已经结束了, 然后传入的key是新的block的第一个key, 这个时候我们可以为上一个block生成index
+  // 之所以等插入新的block的第一个key的时候再生成index, 是因为这样可以节省index空间. 比如上一个block的最后的key是
+  // "the quick brown fox", 新block的第一个key是 "the who", 这样我们可以把上一个block的index key设成"the r", 因为它大于上一个block
+  // 的最后一个key, 也小于新block的第一个key, 但是这个只有当我们看到"the who"的时候才知道
+  bool pending_index_entry;
+
+  BlockHandle pending_handle;  // 存的是上一个block在文件的偏移量开始地址和block的长度, 用来生成索引
+  std::string compressed_output; // 压缩后的内容
+}
+@enduml

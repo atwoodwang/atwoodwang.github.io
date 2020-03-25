@@ -1,0 +1,17 @@
+@startuml
+skinparam dpi 2000
+class TableBuilder {
+  -Rep* rep_; // 一个专门的struct结构存储TableBuilder配置和状态
+
+  +void Add(const Slice& key, const Slice& value); // 往sst文件中写入一条数据
+  +void Flush(); // 将当前data block写入到磁盘中
+  +Status status() const; // 当前builder的状态
+  +Status Finish(); // 结束当前文件的写入
+  +void Abandon(); // 表明当前builder里面的内容应该被丢弃
+  +uint64_t NumEntries() const; // builder里面一共插入的记录数量
+  +uint64_t FileSize() const; // 当前所产生的sst文件的大小
+  -bool ok() const; // 返回builder的状态
+  -void WriteBlock(BlockBuilder* block, BlockHandle* handle); // 把block中的内容写入到handle指向的位置
+  -void WriteRawBlock(const Slice& data, CompressionType, BlockHandle* handle); // 把data和compressionType写入到handle指向的位置
+}
+@enduml
