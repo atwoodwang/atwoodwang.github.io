@@ -27,8 +27,6 @@
   </title>
   <meta name="title" content="深入浅出 LevelDB (6) - SST文件 | Atwood&#39;s Blog">
     
-  
-  <link rel="stylesheet" href="/font/iconfont.css">
   <link rel="stylesheet" href="/css/main.min.css">
 
 
@@ -70,12 +68,22 @@
   <body class="">
     <div class="wrapper">
         <nav class="navbar">
+    
+        <div class="top-scroll-bar"></div>
+    
     <div class="container">
         <div class="navbar-header header-logo">
-        	<a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-xihuan"></i></a>&nbsp;<a href="http://atwoodwang.com/">Atwood&#39;s Blog</a>
+            
+            <span class="logo_mark" >></span>
+            <a href="http://atwoodwang.com/">
+                <span class="logo_text" >$ cd /home/ </span>
+                <span class="logo_cursor" ></span>
+            </a>
+            
         </div>
-        <div class="menu navbar-right">
+        <div class="navbar-right">
                 
+                <span class="menu">
                 
                 <a class="menu-item" href="/posts/" title="">Blog</a>
                 
@@ -85,15 +93,31 @@
                 
                 <a class="menu-item" href="/about/" title="">About</a>
                 
+                </span>
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-dark-mode"></i></a>
         </div>
     </div>
 </nav>
 <nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     
+         <div class="top-scroll-bar"></div>
+     
      <div class="container">
         <div class="navbar-header">
-            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-xihuan"></i></a>&nbsp;<a href="http://atwoodwang.com/">Atwood&#39;s Blog</a></div>
-            <div class="menu-toggle">
-                <span></span><span></span><span></span>
+            <div class="header-logo">
+                
+                    <span class="logo_mark">></span>
+                    <a href="http://atwoodwang.com/">
+                        <span class="logo_text">$ cd /home/ </span>
+                        <span class="logo_cursor"></span>
+                </a>
+                
+            </div>
+            <div class="navbar-right">
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-dark-mode"></i></a>
+                <div class="menu-toggle">
+                    <span></span><span></span><span></span>
+                </div>
             </div>
         </div>
      
@@ -129,10 +153,10 @@
                         <a href="http://atwoodwang.com/categories/release/"> Release </a>
                         
                 </span>
-            <span class="post-word-count">, 6088 words</span>
-            <span id="busuanzi_container_page_pv">
-                , 本文总阅读量<span id="busuanzi_value_page_pv"></span>次
-            </span>
+                <span class="post-word-count">, 6088 words</span>
+                <span id="busuanzi_container_page_pv">
+                    , <span id="busuanzi_value_page_pv"></span> views
+                </span>
         </div>
     </header>
     <div class="post-content">
@@ -539,6 +563,8 @@ BlockHandle实际长度和最大长度之间的空隙填充为0. metaindex_handl
           
                  
           
+        
+
     </div>
 </article>
           </div>
@@ -550,16 +576,18 @@ BlockHandle实际长度和最大长度之间的空隙填充为0. metaindex_handl
         <span itemprop="copyrightYear">2020 - 2020</span>
         
         <span class="with-love">
-    	 <i class="iconfont icon-love"></i> 
+    	 <i class="iconfont icon-love"></i>
          </span>
          
-            <span class="author" itemprop="copyrightHolder"><a href="http://atwoodwang.com/">Atwood.Wang</a> | </span> 
+            <span class="author" itemprop="copyrightHolder"><a href="http://atwoodwang.com/">Atwood.Wang</a> | </span>
          
 
          
-		  <span>Powered by <a href="https://gohugo.io/" target="_blank" rel="external nofollow">Hugo</a> & <a href="https://github.com/liuzc/leaveit" target="_blank" rel="external nofollow">LeaveIt</a></span> 
+		  <span>Powered by <a href="https://gohugo.io/" target="_blank" rel="external nofollow">Hugo</a> & <a href="https://github.com/liuzc/leaveit" target="_blank" rel="external nofollow">LeaveIt</a></span>
     </div>
 </footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pangu/4.0.7/pangu.min.js"></script>
+<script> pangu.spacingPage();  </script>
 
 
 
@@ -573,11 +601,12 @@ BlockHandle实际长度和最大长度之间的空隙填充为0. metaindex_handl
 
 
     
-     <link href="//lib.baomitu.com/lightgallery/1.6.11/css/lightgallery.min.css" rel="stylesheet">  
+     <link href="https://cdn.bootcss.com/lightgallery/1.6.11/css/lg-fb-comment-box.min.css" rel="stylesheet">  
       
      <script src="/js/vendor_gallery.min.js" async="" ></script>
     
   
+
 
 
 

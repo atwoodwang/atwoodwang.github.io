@@ -27,14 +27,12 @@
   </title>
   <meta name="title" content="Categories | Atwood&#39;s Blog">
     
-  
-  <link rel="stylesheet" href="/font/iconfont.css">
   <link rel="stylesheet" href="/css/main.min.css">
 
 
   
-    <link href="http://atwoodwang.com/categories/index.xml" rel="alternate" type="application/rss+xml" title="Atwood&#39;s Blog" />
-    <link href="http://atwoodwang.com/categories/index.xml" rel="feed" type="application/rss+xml" title="Atwood&#39;s Blog" />
+  <link rel="alternate" href="/categories/index.xml" type="application/rss+xml" title="Atwood&#39;s Blog">
+  <link rel="feed" href="/categories/index.xml" type="application/rss+xml" title="Atwood&#39;s Blog">
   
   
  
@@ -47,12 +45,20 @@
   <body class="">
     <div class="wrapper">
         <nav class="navbar">
+    
     <div class="container">
         <div class="navbar-header header-logo">
-        	<a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-xihuan"></i></a>&nbsp;<a href="http://atwoodwang.com/">Atwood&#39;s Blog</a>
+            
+            <span class="logo_mark" >></span>
+            <a href="http://atwoodwang.com/">
+                <span class="logo_text" >$ cd /home/ </span>
+                <span class="logo_cursor" ></span>
+            </a>
+            
         </div>
-        <div class="menu navbar-right">
+        <div class="navbar-right">
                 
+                <span class="menu">
                 
                 <a class="menu-item" href="/posts/" title="">Blog</a>
                 
@@ -62,15 +68,29 @@
                 
                 <a class="menu-item" href="/about/" title="">About</a>
                 
+                </span>
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-dark-mode"></i></a>
         </div>
     </div>
 </nav>
 <nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     
      <div class="container">
         <div class="navbar-header">
-            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-xihuan"></i></a>&nbsp;<a href="http://atwoodwang.com/">Atwood&#39;s Blog</a></div>
-            <div class="menu-toggle">
-                <span></span><span></span><span></span>
+            <div class="header-logo">
+                
+                    <span class="logo_mark">></span>
+                    <a href="http://atwoodwang.com/">
+                        <span class="logo_text">$ cd /home/ </span>
+                        <span class="logo_cursor"></span>
+                </a>
+                
+            </div>
+            <div class="navbar-right">
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-dark-mode"></i></a>
+                <div class="menu-toggle">
+                    <span></span><span></span><span></span>
+                </div>
             </div>
         </div>
      
@@ -108,26 +128,26 @@
     
          <div class="card-item">
            <div class="categories" >
-             <a href="/categories/release/"><h3> <i class="iconfont icon-folder" style="padding-right: 3px"></i> Release  </h3> </a>
+             <a href="http://atwoodwang.com/categories/release/"><h3> <i class="iconfont icon-folder" style="padding-right: 3px"></i> Release  </h3> </a>
                   
                 <article class="archive-item">
-                <a href="/2020/leveldb_memtable/" class="archive-item-link">深入浅出 LevelDB (5) - Memtable 内存表</a>
+                <a href="http://atwoodwang.com/2020/leveldb_memtable/" class="archive-item-link">深入浅出 LevelDB (5) - Memtable 内存表</a>
                 </article>
                  
                 <article class="archive-item">
-                <a href="/2020/leveldb_sst/" class="archive-item-link">深入浅出 LevelDB (6) - SST文件</a>
+                <a href="http://atwoodwang.com/2020/leveldb_sst/" class="archive-item-link">深入浅出 LevelDB (6) - SST文件</a>
                 </article>
                  
                 <article class="archive-item">
-                <a href="/2020/leveldb_skiplist/" class="archive-item-link">深入浅出 LevelDB (3) - SkipList 跳跃链表</a>
+                <a href="http://atwoodwang.com/2020/leveldb_skiplist/" class="archive-item-link">深入浅出 LevelDB (3) - SkipList 跳跃链表</a>
                 </article>
                  
                 <article class="archive-item">
-                <a href="/2020/leveldb_varint/" class="archive-item-link">深入浅出 LevelDB (4) - Varint 变长编码</a>
+                <a href="http://atwoodwang.com/2020/leveldb_varint/" class="archive-item-link">深入浅出 LevelDB (4) - Varint 变长编码</a>
                 </article>
                  
                 <article class="archive-item">
-                <a href="/2020/leveldb_arena/" class="archive-item-link">深入浅出 LevelDB (2) - Arena 内存池</a>
+                <a href="http://atwoodwang.com/2020/leveldb_arena/" class="archive-item-link">深入浅出 LevelDB (2) - Arena 内存池</a>
                 </article>
               
                
@@ -153,16 +173,18 @@
         <span itemprop="copyrightYear">2020 - 2020</span>
         
         <span class="with-love">
-    	 <i class="iconfont icon-love"></i> 
+    	 <i class="iconfont icon-love"></i>
          </span>
          
-            <span class="author" itemprop="copyrightHolder"><a href="http://atwoodwang.com/">Atwood.Wang</a> | </span> 
+            <span class="author" itemprop="copyrightHolder"><a href="http://atwoodwang.com/">Atwood.Wang</a> | </span>
          
 
          
-		  <span>Powered by <a href="https://gohugo.io/" target="_blank" rel="external nofollow">Hugo</a> & <a href="https://github.com/liuzc/leaveit" target="_blank" rel="external nofollow">LeaveIt</a></span> 
+		  <span>Powered by <a href="https://gohugo.io/" target="_blank" rel="external nofollow">Hugo</a> & <a href="https://github.com/liuzc/leaveit" target="_blank" rel="external nofollow">LeaveIt</a></span>
     </div>
 </footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pangu/4.0.7/pangu.min.js"></script>
+<script> pangu.spacingPage();  </script>
 
 
 
@@ -176,6 +198,7 @@
 
     
     <script src="/js/vendor_main.min.js" async=""></script>
+
 
 
 
