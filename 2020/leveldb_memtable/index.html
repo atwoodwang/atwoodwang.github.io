@@ -9,7 +9,7 @@
   
   
   
-  <link rel="prev" href="http://atwoodwang.com/2020/leveldb_skiplist/" />
+  <link rel="prev" href="http://atwoodwang.com/2020/leveldb_sst/" />
   
   <link rel="canonical" href="http://atwoodwang.com/2020/leveldb_memtable/" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -57,7 +57,7 @@
     "datePublished": "2020-03-23 00:00:00 \x2b0000 UTC",
     "dateModified" : "2020-03-23 00:00:00 \x2b0000 UTC",
     "url" : "http:\/\/atwoodwang.com\/2020\/leveldb_memtable\/",
-    "wordCount" : "658",
+    "wordCount" : "661",
     "keywords" : [ "LevelDB","Databases","C\x2b\x2b","数据引擎", "Atwood\x27s Blog"]
 }
 </script>
@@ -300,7 +300,8 @@
   <span style="color:#75715e">// false表示遍历器不合法, 我理解是skiplist为空或者其他未知错误的时候
 </span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> false;
 }
-</code></pre></div>
+</code></pre></div><p>本篇内容的详细源码可看<a href="https://github.com/google/leveldb/blob/master/db/memtable.h">leveldb/db/memtable.h</a> 和 <a href="https://github.com/google/leveldb/blob/master/db/memtable.cc">leveldb/db/memtable.cc</a></p>
+
     </div>
 
     <div class="post-copyright">
@@ -348,7 +349,7 @@
 
     <div class="post-nav">
         
-        <a href="http://atwoodwang.com/2020/leveldb_skiplist/" class="prev" rel="prev" title="深入浅出 LevelDB (3) - SkipList 跳跃链表"><i class="iconfont icon-left"></i>&nbsp;深入浅出 LevelDB (3) - SkipList 跳跃链表</a>
+        <a href="http://atwoodwang.com/2020/leveldb_sst/" class="prev" rel="prev" title="深入浅出 LevelDB (6) - SST文件"><i class="iconfont icon-left"></i>&nbsp;深入浅出 LevelDB (6) - SST文件</a>
          
         
     </div>

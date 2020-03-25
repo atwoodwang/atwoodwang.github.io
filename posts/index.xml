@@ -26,6 +26,25 @@ Memtable结构 现在我们来看看Memtable的结构:
     </item>
     
     <item>
+      <title>深入浅出 LevelDB (6) - SST文件</title>
+      <link>http://atwoodwang.com/2020/leveldb_sst/</link>
+      <pubDate>Mon, 23 Mar 2020 00:00:00 +0000</pubDate>
+      
+      <guid>http://atwoodwang.com/2020/leveldb_sst/</guid>
+      <description>SST 文件 上一篇我们提到, 当memtable的大小达到一定的阈值, 会变为immutable memtable, 然后由后台线程异步刷新到磁盘上. LevelDB里的数据在磁盘上就是以SST文件的格式存储的. 最新版本的SSTable文件名后缀为ldb, 同时保留了sst后缀的兼容. 这一节我们就来看看SST文件相关的实现.
+在LevelDB源码的doc文件夹下有关于sst文件的文档table_format.txt, 里面介绍了sst文件的设计和结构.
+这里, 我先放一张自己制作的图, 看看SSTable文件的整体结构:
+第一眼看上去会觉得十分复杂, 但是没关系, 我会一步一步的把这个图拆解开来逐个解释.
+Record 记录 首先, 让我们从基础开始讲起. 在上图的右上角, 我们可以看到一个一个的record. 其实代表的就是用户插入的一个一个键值对, 它的结构放大来看是这样:
+我们上一节讲到, skiplist里面保存的每一个节点的格式是memtable_key+memtable_value, 所以每个节点里都保存有user key的全部信息. 但是实际上, 对于相邻的节点, user key有较大几率是有一定重合的. 所以在把数据保存到磁盘上的sst文件的时候, 为了节省空间, LevelDB对user key利用相同的前缀做了一定的压缩.
+每一条记录有 key共享长度 ＋ key非共享长度＋ value长度 ＋ key非共享内容 + value内容组成. 两条记录如果user key有相同的部分, 那么第二条记录可以和第一条共享相同的前缀.
+比如我们有两条记录需要保存. 第一条记录为hello_world:9，第二条记录为hello_you:18.
+那么第一条记录存储格式为:
+0 + 11 + 1 + hello_world + 9
+0是因为默认第一条记录的共享长度为0. 11是&amp;quot;hello_world&amp;quot;的长度, 因为第一条记录没有共享前缀, 所以非共享的长度就是key的整个长度. 1是第一条记录的value在varint编码下会占用的字节长度. 因为没有共享, 所以最后两个部分就是完整的user key和user value.</description>
+    </item>
+    
+    <item>
       <title>深入浅出 LevelDB (3) - SkipList 跳跃链表</title>
       <link>http://atwoodwang.com/2020/leveldb_skiplist/</link>
       <pubDate>Sun, 22 Mar 2020 00:00:00 +0000</pubDate>

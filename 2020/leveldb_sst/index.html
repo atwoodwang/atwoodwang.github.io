@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  <meta name="author" content="Atwood.Wang">
+  
+  
+  
+  <link rel="prev" href="http://atwoodwang.com/2020/leveldb_skiplist/" />
+  <link rel="next" href="http://atwoodwang.com/2020/leveldb_memtable/" />
+  <link rel="canonical" href="http://atwoodwang.com/2020/leveldb_sst/" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           深入浅出 LevelDB (6) - SST文件 | Atwood&#39;s Blog
+       
+  </title>
+  <meta name="title" content="深入浅出 LevelDB (6) - SST文件 | Atwood&#39;s Blog">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  
+  
+ 
+
+<script type="application/ld+json">
+ "@context" : "http://schema.org",
+    "@type" : "BlogPosting",
+    "mainEntityOfPage": {
+         "@type": "WebPage",
+         "@id": "http:\/\/atwoodwang.com\/"
+    },
+    "articleSection" : "posts",
+    "name" : "深入浅出 LevelDB (6) - SST文件",
+    "headline" : "深入浅出 LevelDB (6) - SST文件",
+    "description" : "SST 文件 上一篇我们提到, 当memtable的大小达到一定的阈值, 会变为immutable memtable, 然后由后台线程异步刷新到磁盘上. LevelDB里的数据在磁盘上就是以SST文件的格式存储的. 最新版本的SSTable文件名后缀为ldb, 同时保留了sst后缀的兼容. 这一节我们就来看看SST文件相关的实现.\n在LevelDB源码的doc文件夹下有关于sst文件的文档table_format.txt, 里面介绍了sst文件的设计和结构.\n这里, 我先放一张自己制作的图, 看看SSTable文件的整体结构:\n第一眼看上去会觉得十分复杂, 但是没关系, 我会一步一步的把这个图拆解开来逐个解释.\nRecord 记录 首先, 让我们从基础开始讲起. 在上图的右上角, 我们可以看到一个一个的record. 其实代表的就是用户插入的一个一个键值对, 它的结构放大来看是这样:\n我们上一节讲到, skiplist里面保存的每一个节点的格式是memtable_key\x2bmemtable_value, 所以每个节点里都保存有user key的全部信息. 但是实际上, 对于相邻的节点, user key有较大几率是有一定重合的. 所以在把数据保存到磁盘上的sst文件的时候, 为了节省空间, LevelDB对user key利用相同的前缀做了一定的压缩.\n每一条记录有 key共享长度 ＋ key非共享长度＋ value长度 ＋ key非共享内容 \x2b value内容组成. 两条记录如果user key有相同的部分, 那么第二条记录可以和第一条共享相同的前缀.\n比如我们有两条记录需要保存. 第一条记录为hello_world:9，第二条记录为hello_you:18.\n那么第一条记录存储格式为:\n0 \x2b 11 \x2b 1 \x2b hello_world \x2b 9\n0是因为默认第一条记录的共享长度为0. 11是\x26quot;hello_world\x26quot;的长度, 因为第一条记录没有共享前缀, 所以非共享的长度就是key的整个长度. 1是第一条记录的value在varint编码下会占用的字节长度. 因为没有共享, 所以最后两个部分就是完整的user key和user value.",
+    "inLanguage" : "zh-cn",
+    "author" : "Atwood",
+    "creator" : "Atwood",
+    "publisher": "Atwood",
+    "accountablePerson" : "Atwood",
+    "copyrightHolder" : "Atwood",
+    "copyrightYear" : "2020",
+    "datePublished": "2020-03-23 00:00:00 \x2b0000 UTC",
+    "dateModified" : "2020-03-23 00:00:00 \x2b0000 UTC",
+    "url" : "http:\/\/atwoodwang.com\/2020\/leveldb_sst\/",
+    "wordCount" : "1046",
+    "keywords" : [ "LevelDB","Databases","C\x2b\x2b","数据引擎", "Atwood\x27s Blog"]
+}
+</script>
+
+</head>
+
+  
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-xihuan"></i></a>&nbsp;<a href="http://atwoodwang.com/">Atwood&#39;s Blog</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">Blog</a>
+                
+                <a class="menu-item" href="/categories/" title="">Categories</a>
+                
+                <a class="menu-item" href="/tags/" title="">Tags</a>
+                
+                <a class="menu-item" href="/about/" title="">About</a>
+                
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-xihuan"></i></a>&nbsp;<a href="http://atwoodwang.com/">Atwood&#39;s Blog</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">Blog</a>
+                
+                <a class="menu-item" href="/categories/" title="">Categories</a>
+                
+                <a class="menu-item" href="/tags/" title="">Tags</a>
+                
+                <a class="menu-item" href="/about/" title="">About</a>
+                
+        </div>
+    </div>
+</nav>
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp" itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">深入浅出 LevelDB (6) - SST文件</h1>
+        <div class="post-meta">
+                Written by <a itemprop="name" href="http://atwoodwang.com/" rel="author">Atwood</a> with ♥ 
+                <span class="post-time">
+                on <time datetime=2020-03-23 itemprop="datePublished">March 23, 2020</time>
+                </span>
+                in
+                <i class="iconfont icon-folder"></i>
+                <span class="post-category">
+                        <a href="http://atwoodwang.com/categories/release/"> Release </a>
+                        
+                </span>
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+            
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          <h2 id="sst-文件">SST 文件</h2>
+<p>上一篇我们提到, 当memtable的大小达到一定的阈值, 会变为immutable memtable, 然后由后台线程异步刷新到磁盘上. LevelDB里的数据在磁盘上就是以SST文件的格式存储的. 最新版本的SSTable文件名后缀为ldb, 同时保留了sst后缀的兼容. 这一节我们就来看看SST文件相关的实现.</p>
+<p>在LevelDB源码的doc文件夹下有关于sst文件的文档<a href="https://github.com/google/leveldb/blob/master/doc/table_format.md">table_format.txt</a>, 里面介绍了sst文件的设计和结构.</p>
+<p>这里, 我先放一张自己制作的图, 看看SSTable文件的整体结构:</p>
+<p><img src="/images/leveldb_sst/sst.png" alt="sst"></p>
+<p>第一眼看上去会觉得十分复杂, 但是没关系, 我会一步一步的把这个图拆解开来逐个解释.</p>
+<h2 id="record-记录">Record 记录</h2>
+<p>首先, 让我们从基础开始讲起. 在上图的右上角, 我们可以看到一个一个的record. 其实代表的就是用户插入的一个一个键值对, 它的结构放大来看是这样:</p>
+<p><img src="/images/leveldb_sst/record.png" alt="record"></p>
+<p>我们上一节讲到, skiplist里面保存的每一个节点的格式是memtable_key+memtable_value, 所以每个节点里都保存有user key的全部信息. 但是实际上, 对于相邻的节点, user key有较大几率是有一定重合的. 所以在把数据保存到磁盘上的sst文件的时候, 为了节省空间, LevelDB对user key利用相同的前缀做了一定的压缩.</p>
+<p>每一条记录有 <code>key共享长度</code> ＋ <code>key非共享长度</code>＋ <code>value长度</code> ＋ <code>key非共享内容</code> + <code>value内容组成</code>. 两条记录如果user key有相同的部分, 那么第二条记录可以和第一条共享相同的前缀.</p>
+<p>比如我们有两条记录需要保存. 第一条记录为hello_world:9，第二条记录为hello_you:18.</p>
+<p>那么第一条记录存储格式为:</p>
+<p><code>0</code> + <code>11</code> + <code>1</code> + <code>hello_world</code> + <code>9</code></p>
+<p><code>0</code>是因为默认第一条记录的共享长度为0. <code>11</code>是&quot;hello_world&quot;的长度, 因为第一条记录没有共享前缀, 所以非共享的长度就是key的整个长度. <code>1</code>是第一条记录的value在varint编码下会占用的字节长度. 因为没有共享, 所以最后两个部分就是完整的user key和user value.</p>
+<p>第二条记录存储格式为：</p>
+<p><code>6</code> + <code>3</code> + <code>1</code> + <code>you</code> + <code>18</code></p>
+<p><code>6</code>是因为第二条记录和第一条有共享的<code>hello_</code>前缀, 长度为6. <code>3</code>是因为非共享的部分<code>you</code>的长度为3. <code>1</code>是第二条记录的value在varint编码下会占用的字节长度. 然后最后两个部分是key的非共享内容: <code>you</code> 和 user value: <code>18</code>.</p>
+<p>虽然共享前缀能够减少存储空间, 但是假如我们有1000条记录, 我们不可能全部和第一条记录的前缀去计算共享的部分, 因为随着key的距离间隔变大, key也会变的越来越不一样, 相同的部分会减少. 所以我们需要隔一段距离设置一个<code>restart point</code>, 把当前的key设置为比较的基准点, 之后的key会和新的基准点进行前缀的比较. LevelDB里默认是每隔16条记录就会设置一个<code>restart point</code>.</p>
+<h2 id="block-块">Block 块</h2>
+<p>在存储数据到sst文件中时, LevelDB把sst文件划分为一个一个block, 根据不同的类型又分为data block, meta block, meta block index, data block index. 其中meta block和meta block index只有在打开数据库时传入filter policy参数才会有, 所以这里为了不一次性讲述太多细节, 这里就不详细解释了. 对于block我们只关注data block和data block index.</p>
+<p>这里我们先关注data block, 因为文件的这个部分保存的是用户的键值对信息, 也就是上面我们介绍的一条一条的记录. 每个block的大小默认为4096KB. sst文件的索引, 也就是data block index部分, 保存的其实就是每个data block的起始地址和那个block相应的key值信息. 所以在查询的时候, 我们能够迅速定位到自己想要查询的user key值在哪个block中</p>
+<p>我们来看看data block这一部分的放大图:</p>
+<p><img src="/images/leveldb_sst/block.png" alt="block"></p>
+<p>我们从左往右看, 每个block包含三个部分:</p>
+<ul>
+<li>block content: 里面是具体的数据部分</li>
+<li>compression type: block content里面的数据可能是被压缩过了, 比如LevelDB支持用snappy进行压缩, 所以这里需要指明block content里的数据是如何压缩的. 长度为1字节.</li>
+<li>CRC number: 这里存放block content加上compression type的CRC32校验码, 用来确保block数据的完整性和正确性, 长度为4字节.</li>
+</ul>
+<p>Block Content中, 存放的是一条一条的记录, 还有我们之前提到的<code>restart point</code>信息, 因为一个block中会有多个重启点(每隔16条记录就会有一个), 所以<code>restart point</code>的信息保存在array里, 我们需要记录每个重启点在文件里的偏移量还有这个array的长度. 其中, 每个重启点的偏移量所占用的文件大小为4字节, 假设一共有100个重启点, 则这部分的信息一共会占用100*4 + 4(记录长度本身) = 404字节.</p>
+<h2 id="index-block-索引块">index block 索引块</h2>
+<p>上面我们提到了数据块的结构, SST文件中还有一个重要的部分, 那就是索引. 没有索引, 在查找一个key时, 我们只能遍历整个文件, 一条一条记录的查找, 效率不用我多说肯定会很差.</p>
+<p>SST文件的索引块里, 保存的就是当前文件中每个block的在文件中的起始偏移量和每个block对应的key的信息, 可以方便LevelDB在查找一个user key的时候快速的定位到user key在哪一个block中. 索引块里保存的也是一条一条的记录, 每一条记录对应着一个block. 因为data block里的数据是根据key有序的, 意味着对于相邻的两个block, 前一个block里最大的key, 一定小于后一个block中最小的key.</p>
+<p>所以索引块里每一条数据分为两个部分:</p>
+<ul>
+<li>第一部分 就是一个key值, 这个值一定大于等于他所指向的block里最大的key值, 也必须小于它所指向的block后面一个block中最小的key值.</li>
+<li>第二部分, 就是一个BlockHandle对象. BlockHandle的作用就是方便我们快速的在文件中定位某一个位置. BlockHandle对象里有两个字段:
+<ul>
+<li>offset: block的起始位置在当前文件中的偏移量.</li>
+<li>size: block的长度.</li>
+</ul>
+</li>
+</ul>
+<p>索引块的结构和数据块基本一样, 只是在数据块里, 存储的是一个个user key和user value. 而在索引块里, 存储的是一个个key和偏移量.</p>
+<h2 id="footer-文件尾">Footer 文件尾</h2>
+<p>在每个SST文件的末尾, 还有一个Footer, 它的结构是这样的.</p>
+<p><img src="/images/leveldb_sst/footer.png" alt="footer"></p>
+<p>它存储了data block index和meta block index的block handle, 方便我们在打开文件的时候能快速定位到索引在哪. Footer长度为固定2个BlockHandle的最大长度(20)和1个64bit魔数长度, 这样方便解析.
+BlockHandle实际长度和最大长度之间的空隙填充为0. metaindex_handle指出了meta index block的起始位置和大小. index_handle指出了index block的起始地址和大小. 这两个字段都是BlockHandle对象，可以理解为索引的索引，通过Footer可以直接定位 到metaindex和index block. 最后一个部分是一个固定的常量, 被称为魔数(0xdb4775248b80fb57)。</p>
+<h2 id="sst文件整体">SST文件整体</h2>
+<p>了解了SST文件的每个部分, 我们可以来看看文章开头那个大图最左边的部分, 也就是SST文件的宏观组成结构:</p>
+<p><img src="/images/leveldb_sst/overview.png" alt="overview"></p>
+<p>现在看起来应该就比较清楚了, 一个sst文件, 由多个data block, 多个meta block(这里可以暂时忽略, 因为只有在打开数据库时提供了filter policy才会有), 一个meta index block(可以暂时忽略, 是前面meta block的索引), 一个data block index和一个footer组成.</p>
+<p>前面铺垫了这么多, 我们现在可以来看看源码了, 这一篇我们主要focus在sst文件的写入, 读取以后再讲.</p>
+<h2 id="源码">源码</h2>
+<h3 id="blockbuilder">BlockBuilder</h3>
+<p>首先我们来看看每个block是怎么生成的, LevelDB里定义了一个BlockBuilder类, 专门生成每一个block. 这一部分源码在<a href="https://github.com/google/leveldb/blob/master/table/block_builder.h">leveldb/table/block_builder.h</a>和<a href="https://github.com/google/leveldb/blob/master/table/block_builder.cc">leveldb/table/block_builder.cc</a>中.</p>
+<p><img src="/images/leveldb_sst/blockbuilder.svg" alt="blockbuilder"></p>
+<p>其中最重要的就是<code>Add</code>和<code>Finish</code>方法, 我们一个一个看.</p>
+<h4 id="add">Add</h4>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#66d9ef">void</span> BlockBuilder<span style="color:#f92672">::</span>Add(<span style="color:#66d9ef">const</span> Slice<span style="color:#f92672">&amp;</span> key, <span style="color:#66d9ef">const</span> Slice<span style="color:#f92672">&amp;</span> value) {
+  Slice <span style="color:#a6e22e">last_key_piece</span>(last_key_);
+  assert(<span style="color:#f92672">!</span>finished_);
+  <span style="color:#75715e">// 确保两个重启点之间的条数没有大于option里面设置的值
+</span><span style="color:#75715e"></span>  assert(counter_ <span style="color:#f92672">&lt;=</span> options_<span style="color:#f92672">-&gt;</span>block_restart_interval);
+  <span style="color:#75715e">// 确保buffer里要不就是空的, 要不新的key一定大于上一条插入的key. 因为数据是存在跳表里, 理应是有序的
+</span><span style="color:#75715e"></span>  assert(buffer_.empty()  <span style="color:#75715e">// No values yet?
+</span><span style="color:#75715e"></span>         <span style="color:#f92672">||</span> options_<span style="color:#f92672">-&gt;</span>comparator<span style="color:#f92672">-&gt;</span>Compare(key, last_key_piece) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>);
+  size_t shared <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+  <span style="color:#66d9ef">if</span> (counter_ <span style="color:#f92672">&lt;</span> options_<span style="color:#f92672">-&gt;</span>block_restart_interval) {
+    <span style="color:#75715e">// See how much sharing to do with previous string
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// counter小于options_-&gt;block_restart_interval, 说明这个key还可以压缩
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">const</span> size_t min_length <span style="color:#f92672">=</span> std<span style="color:#f92672">::</span>min(last_key_piece.size(), key.size());
+    <span style="color:#75715e">// 找出来当前key和上一条key共享的长度
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">while</span> ((shared <span style="color:#f92672">&lt;</span> min_length) <span style="color:#f92672">&amp;&amp;</span> (last_key_piece[shared] <span style="color:#f92672">==</span> key[shared])) {
+      shared<span style="color:#f92672">++</span>;
+    }
+  } <span style="color:#66d9ef">else</span> {
+    <span style="color:#75715e">// Restart compression
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// 说明需要开启一个新的重启点, 并且这个key不压缩
+</span><span style="color:#75715e"></span>    restarts_.push_back(buffer_.size());
+    counter_ <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+  }
+  <span style="color:#66d9ef">const</span> size_t non_shared <span style="color:#f92672">=</span> key.size() <span style="color:#f92672">-</span> shared;
+
+  <span style="color:#75715e">// Add &#34;&lt;shared&gt;&lt;non_shared&gt;&lt;value_size&gt;&#34; to buffer_
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// 按照前面讲过的record的格式写入到buffer里.
+</span><span style="color:#75715e"></span>  PutVarint32(<span style="color:#f92672">&amp;</span>buffer_, shared);
+  PutVarint32(<span style="color:#f92672">&amp;</span>buffer_, non_shared);
+  PutVarint32(<span style="color:#f92672">&amp;</span>buffer_, value.size());
+
+  <span style="color:#75715e">// Add string delta to buffer_ followed by value
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// 添加共享前缀之后的字符串到buffer里, 如果key是abcdef, 共享前缀是abc, 这key.data() + shared是d字符开始的指针, 然后长度为def的长度,
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// 就是3
+</span><span style="color:#75715e"></span>  buffer_.append(key.data() <span style="color:#f92672">+</span> shared, non_shared);
+  buffer_.append(value.data(), value.size());
+
+  <span style="color:#75715e">// Update state
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// 把last_key设成这次新加入的key
+</span><span style="color:#75715e"></span>  last_key_.resize(shared);
+  last_key_.append(key.data() <span style="color:#f92672">+</span> shared, non_shared);
+  assert(Slice(last_key_) <span style="color:#f92672">==</span> key);
+  counter_<span style="color:#f92672">++</span>;
+}
+</code></pre></div><h4 id="currentsizeestimate">CurrentSizeEstimate</h4>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">// 计算block当前的大致大小. 因为block是由一个一个的key/value pair和重启点的内容和重启点array的size组成的, 所以加起来就好
+</span><span style="color:#75715e"></span>size_t BlockBuilder<span style="color:#f92672">::</span>CurrentSizeEstimate() <span style="color:#66d9ef">const</span> {
+  <span style="color:#66d9ef">return</span> (buffer_.size() <span style="color:#f92672">+</span>                       <span style="color:#75715e">// Raw data buffer
+</span><span style="color:#75715e"></span>          restarts_.size() <span style="color:#f92672">*</span> <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">uint32_t</span>) <span style="color:#f92672">+</span>  <span style="color:#75715e">// Restart array
+</span><span style="color:#75715e"></span>          <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">uint32_t</span>));                     <span style="color:#75715e">// Restart array length
+</span><span style="color:#75715e"></span>}
+</code></pre></div><h4 id="finish">Finish</h4>
+<p>在当前block大小达到option里配置的block最大大小时, 就会触发Finish方法, 把标志位finished_设置为true, 表示当前block已经结束, 然后在buffer后面加上restart point的信息, 并返回这整个block的内容.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">// 每个Block的结尾, 都会加上每个重启点的位置, 还有重启点的数量
+</span><span style="color:#75715e"></span>Slice BlockBuilder<span style="color:#f92672">::</span>Finish() {
+  <span style="color:#75715e">// Append restart array
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">for</span> (size_t i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> restarts_.size(); i<span style="color:#f92672">++</span>) {
+    PutFixed32(<span style="color:#f92672">&amp;</span>buffer_, restarts_[i]);
+  }
+  PutFixed32(<span style="color:#f92672">&amp;</span>buffer_, restarts_.size());
+  finished_ <span style="color:#f92672">=</span> true;
+  <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">Slice</span>(buffer_);
+}
+</code></pre></div><h3 id="tablebuilder">TableBuilder</h3>
+<p>另一个重要的类是TableBuilder, 上面的BlockBuilder只是负责生成block的内容, 具体监控block的文件大小, 并把一个个block的内容还有其他元数据整合成SST文件的格式, 都是由TableBuilder负责的. 这部分的源码在<a href="https://github.com/google/leveldb/blob/master/table/table_builder.cc">leveldb/table/table_builder.cc</a>中.</p>
+<p>先看看TableBuilder的结构:</p>
+<p><img src="/images/leveldb_sst/tablebuilder.svg" alt="tablebuilder"></p>
+<p>Rep其实是个struct, 专门用来存储TableBuilder的配置和一些状态</p>
+<p><img src="/images/leveldb_sst/rep.svg" alt="rep"></p>
+<p>TableBuilder里其实最主要的就是Add, Flush和Finish方法:</p>
+<ul>
+<li>Add: 往当前block中写入一条数据</li>
+<li>Flush: 当前block大小达到阈值, 结束当前block写入.</li>
+<li>Finish: 当前sst文件大小达到阈值, 结束当前文件的写入.</li>
+</ul>
+<h4 id="add-1">Add</h4>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#66d9ef">void</span> TableBuilder<span style="color:#f92672">::</span>Add(<span style="color:#66d9ef">const</span> Slice<span style="color:#f92672">&amp;</span> key, <span style="color:#66d9ef">const</span> Slice<span style="color:#f92672">&amp;</span> value) {
+  Rep<span style="color:#f92672">*</span> r <span style="color:#f92672">=</span> rep_;
+  assert(<span style="color:#f92672">!</span>r<span style="color:#f92672">-&gt;</span>closed);
+  <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>ok()) <span style="color:#66d9ef">return</span>;
+  <span style="color:#66d9ef">if</span> (r<span style="color:#f92672">-&gt;</span>num_entries <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>) {
+      <span style="color:#75715e">// 当前插入的key需要大于之前的key
+</span><span style="color:#75715e"></span>    assert(r<span style="color:#f92672">-&gt;</span>options.comparator<span style="color:#f92672">-&gt;</span>Compare(key, Slice(r<span style="color:#f92672">-&gt;</span>last_key)) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>);
+  }
+
+  <span style="color:#75715e">// 当pending_index_entry为空时, 证明上一个block已经结束了, 然后传入的key是新的block的第一个key, 这个时候我们可以为上一个block生成index
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// 之所以等插入新的block的第一个key的时候再生成index, 是因为这样可以节省index空间. 比如上一个block的最后的key是
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// &#34;the quick brown fox&#34;, 新block的第一个key是 &#34;the who&#34;, 这样我们可以把上一个block的index key设成&#34;the r&#34;, 因为它大于上一个block
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// 的最后一个key, 也小于新block的第一个key, 但是这个只有当我们看到&#34;the who&#34;的时候才知道
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (r<span style="color:#f92672">-&gt;</span>pending_index_entry) {
+    assert(r<span style="color:#f92672">-&gt;</span>data_block.empty());
+    <span style="color:#75715e">// 找到last_key和当前key最短的separator, 比如按照上面comment里的例子就是the r, 并赋值到last_key里面
+</span><span style="color:#75715e"></span>    r<span style="color:#f92672">-&gt;</span>options.comparator<span style="color:#f92672">-&gt;</span>FindShortestSeparator(<span style="color:#f92672">&amp;</span>r<span style="color:#f92672">-&gt;</span>last_key, key);
+    std<span style="color:#f92672">::</span>string handle_encoding;
+    <span style="color:#75715e">// pending_handle里存的是上一个block的地址信息, 开始地址和长度, 这里
+</span><span style="color:#75715e"></span>    r<span style="color:#f92672">-&gt;</span>pending_handle.EncodeTo(<span style="color:#f92672">&amp;</span>handle_encoding);
+    <span style="color:#75715e">// 往index_block里面写上一个block的索引信息, 对应的是key和地址
+</span><span style="color:#75715e"></span>    r<span style="color:#f92672">-&gt;</span>index_block.Add(r<span style="color:#f92672">-&gt;</span>last_key, Slice(handle_encoding));
+    <span style="color:#75715e">//赋值为false，开始新一个数据块写
+</span><span style="color:#75715e"></span>    r<span style="color:#f92672">-&gt;</span>pending_index_entry <span style="color:#f92672">=</span> false;
+  }
+
+  <span style="color:#66d9ef">if</span> (r<span style="color:#f92672">-&gt;</span>filter_block <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nullptr</span>) {
+    r<span style="color:#f92672">-&gt;</span>filter_block<span style="color:#f92672">-&gt;</span>AddKey(key);
+  }
+
+  <span style="color:#75715e">// 将last_key再重写为这一次插入的key
+</span><span style="color:#75715e"></span>  r<span style="color:#f92672">-&gt;</span>last_key.assign(key.data(), key.size());
+  r<span style="color:#f92672">-&gt;</span>num_entries<span style="color:#f92672">++</span>;
+  r<span style="color:#f92672">-&gt;</span>data_block.Add(key, value);
+
+  <span style="color:#66d9ef">const</span> size_t estimated_block_size <span style="color:#f92672">=</span> r<span style="color:#f92672">-&gt;</span>data_block.CurrentSizeEstimate();
+  <span style="color:#75715e">// 如果table里当前的block_size大于了option里设定的值, 则触发一次flush
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (estimated_block_size <span style="color:#f92672">&gt;=</span> r<span style="color:#f92672">-&gt;</span>options.block_size) {
+    Flush();
+  }
+}
+</code></pre></div><p>最后我们可以看到, 当block大小到达一定阈值时, 会触发一次flush, 将block写到磁盘中. 这个flush并不是BlockBuilder里的flush, 我们来看看它的实现</p>
+<h3 id="flush">Flush</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">// 将当前data block写到磁盘中
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> TableBuilder<span style="color:#f92672">::</span>Flush() {
+  Rep<span style="color:#f92672">*</span> r <span style="color:#f92672">=</span> rep_;
+  assert(<span style="color:#f92672">!</span>r<span style="color:#f92672">-&gt;</span>closed);
+  <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>ok()) <span style="color:#66d9ef">return</span>;
+  <span style="color:#66d9ef">if</span> (r<span style="color:#f92672">-&gt;</span>data_block.empty()) <span style="color:#66d9ef">return</span>;
+  assert(<span style="color:#f92672">!</span>r<span style="color:#f92672">-&gt;</span>pending_index_entry);
+  <span style="color:#75715e">// 将block写到内存缓冲区, 等待flush到磁盘
+</span><span style="color:#75715e"></span>  WriteBlock(<span style="color:#f92672">&amp;</span>r<span style="color:#f92672">-&gt;</span>data_block, <span style="color:#f92672">&amp;</span>r<span style="color:#f92672">-&gt;</span>pending_handle);
+  <span style="color:#66d9ef">if</span> (ok()) {
+    r<span style="color:#f92672">-&gt;</span>pending_index_entry <span style="color:#f92672">=</span> true;
+    <span style="color:#75715e">// 将文件flush到磁盘上
+</span><span style="color:#75715e"></span>    r<span style="color:#f92672">-&gt;</span>status <span style="color:#f92672">=</span> r<span style="color:#f92672">-&gt;</span>file<span style="color:#f92672">-&gt;</span>Flush();
+  }
+  <span style="color:#66d9ef">if</span> (r<span style="color:#f92672">-&gt;</span>filter_block <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nullptr</span>) {
+    r<span style="color:#f92672">-&gt;</span>filter_block<span style="color:#f92672">-&gt;</span>StartBlock(r<span style="color:#f92672">-&gt;</span>offset);
+  }
+}
+</code></pre></div><h3 id="writeblock">WriteBlock</h3>
+<p>上面的Flush方法调用了WriteBlock方法. 这个方法会获取到block里的内容, 对它做压缩, 并且传给更加底层的WriteRawBlock方法去做实际的写入.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#66d9ef">void</span> TableBuilder<span style="color:#f92672">::</span>WriteBlock(BlockBuilder<span style="color:#f92672">*</span> block, BlockHandle<span style="color:#f92672">*</span> handle) {
+  <span style="color:#75715e">// File format contains a sequence of blocks where each block has:
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//    block_data: uint8[n]
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//    type: uint8
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//    crc: uint32
+</span><span style="color:#75715e"></span>  assert(ok());
+  Rep<span style="color:#f92672">*</span> r <span style="color:#f92672">=</span> rep_;
+  <span style="color:#75715e">// 调用blockbuilder里的finish方法, 获取了data block里的内容  
+</span><span style="color:#75715e"></span>  Slice raw <span style="color:#f92672">=</span> block<span style="color:#f92672">-&gt;</span>Finish();
+
+  Slice block_contents;
+  <span style="color:#75715e">// 根据options里的compression配置对block_content做压缩
+</span><span style="color:#75715e"></span>  CompressionType type <span style="color:#f92672">=</span> r<span style="color:#f92672">-&gt;</span>options.compression;
+  <span style="color:#75715e">// TODO(postrelease): Support more compression options: zlib?
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">switch</span> (type) {
+    <span style="color:#66d9ef">case</span> kNoCompression:
+      block_contents <span style="color:#f92672">=</span> raw;
+      <span style="color:#66d9ef">break</span>;
+
+    <span style="color:#66d9ef">case</span> kSnappyCompression: {
+      std<span style="color:#f92672">::</span>string<span style="color:#f92672">*</span> compressed <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>r<span style="color:#f92672">-&gt;</span>compressed_output;
+      <span style="color:#66d9ef">if</span> (port<span style="color:#f92672">::</span>Snappy_Compress(raw.data(), raw.size(), compressed) <span style="color:#f92672">&amp;&amp;</span>
+          compressed<span style="color:#f92672">-&gt;</span>size() <span style="color:#f92672">&lt;</span> raw.size() <span style="color:#f92672">-</span> (raw.size() <span style="color:#f92672">/</span> <span style="color:#ae81ff">8u</span>)) {
+        block_contents <span style="color:#f92672">=</span> <span style="color:#f92672">*</span>compressed;
+      } <span style="color:#66d9ef">else</span> {
+        <span style="color:#75715e">// Snappy not supported, or compressed less than 12.5%, so just
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// store uncompressed form
+</span><span style="color:#75715e"></span>        block_contents <span style="color:#f92672">=</span> raw;
+        type <span style="color:#f92672">=</span> kNoCompression;
+      }
+      <span style="color:#66d9ef">break</span>;
+    }
+  }
+  <span style="color:#75715e">// 把压缩后的内容写到用户态缓冲区
+</span><span style="color:#75715e"></span>  WriteRawBlock(block_contents, type, handle);
+  <span style="color:#75715e">// 重置block的相关数据, 准备重新开始写
+</span><span style="color:#75715e"></span>  r<span style="color:#f92672">-&gt;</span>compressed_output.clear();
+  block<span style="color:#f92672">-&gt;</span>Reset();
+}
+</code></pre></div><h4 id="writerawblock">WriteRawBlock</h4>
+<p>上面的方法又调用了WriteRawBlock, 这个方法把压缩后的block内容, 连同压缩的方法加上CRC校验码一起写到用户态缓冲区</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#66d9ef">void</span> TableBuilder<span style="color:#f92672">::</span>WriteRawBlock(<span style="color:#66d9ef">const</span> Slice<span style="color:#f92672">&amp;</span> block_contents,
+                                 CompressionType type, BlockHandle<span style="color:#f92672">*</span> handle) {
+  Rep<span style="color:#f92672">*</span> r <span style="color:#f92672">=</span> rep_;
+  <span style="color:#75715e">// 更新pending_handle里的offset, 为接下来生成索引做准备
+</span><span style="color:#75715e"></span>  handle<span style="color:#f92672">-&gt;</span>set_offset(r<span style="color:#f92672">-&gt;</span>offset);
+  <span style="color:#75715e">// 设置block的长度
+</span><span style="color:#75715e"></span>  handle<span style="color:#f92672">-&gt;</span>set_size(block_contents.size());
+  <span style="color:#75715e">// 将block内容写进用户态缓冲区
+</span><span style="color:#75715e"></span>  r<span style="color:#f92672">-&gt;</span>status <span style="color:#f92672">=</span> r<span style="color:#f92672">-&gt;</span>file<span style="color:#f92672">-&gt;</span>Append(block_contents);
+  <span style="color:#66d9ef">if</span> (r<span style="color:#f92672">-&gt;</span>status.ok()) {
+    <span style="color:#75715e">// 在每个block最后加上5个byte, 1个为compression type, 4个为crc校验码
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">char</span> trailer[kBlockTrailerSize];
+    trailer[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">=</span> type;
+    <span style="color:#66d9ef">uint32_t</span> crc <span style="color:#f92672">=</span> crc32c<span style="color:#f92672">::</span>Value(block_contents.data(), block_contents.size());
+    crc <span style="color:#f92672">=</span> crc32c<span style="color:#f92672">::</span>Extend(crc, trailer, <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// Extend crc to cover block type
+</span><span style="color:#75715e"></span>    EncodeFixed32(trailer <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>, crc32c<span style="color:#f92672">::</span>Mask(crc));
+    r<span style="color:#f92672">-&gt;</span>status <span style="color:#f92672">=</span> r<span style="color:#f92672">-&gt;</span>file<span style="color:#f92672">-&gt;</span>Append(Slice(trailer, kBlockTrailerSize));
+    <span style="color:#66d9ef">if</span> (r<span style="color:#f92672">-&gt;</span>status.ok()) {
+      <span style="color:#75715e">// 将文件偏移量移到下一个block开始的地方
+</span><span style="color:#75715e"></span>      r<span style="color:#f92672">-&gt;</span>offset <span style="color:#f92672">+=</span> block_contents.size() <span style="color:#f92672">+</span> kBlockTrailerSize;
+    }
+  }
+}
+</code></pre></div><h4 id="finish-1">Finish</h4>
+<p>上面的Add和Flush, 是以block为粒度的, 对于每一个block, 在写完以后会调用flush刷到磁盘上, 但是这写的都是data block. 在sst文件整个的大小达到一定的容量时, 会触发Finish方法, 在文件后加上索引块和footer, 变成最终的sst文件.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">// 最后为sst文件写入index block和footer
+</span><span style="color:#75715e"></span>Status TableBuilder<span style="color:#f92672">::</span>Finish() {
+  Rep<span style="color:#f92672">*</span> r <span style="color:#f92672">=</span> rep_;
+  Flush();
+  assert(<span style="color:#f92672">!</span>r<span style="color:#f92672">-&gt;</span>closed);
+  r<span style="color:#f92672">-&gt;</span>closed <span style="color:#f92672">=</span> true;
+
+  BlockHandle filter_block_handle, metaindex_block_handle, index_block_handle;
+
+  <span style="color:#75715e">// Write filter block
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (ok() <span style="color:#f92672">&amp;&amp;</span> r<span style="color:#f92672">-&gt;</span>filter_block <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nullptr</span>) {
+    WriteRawBlock(r<span style="color:#f92672">-&gt;</span>filter_block<span style="color:#f92672">-&gt;</span>Finish(), kNoCompression,
+                  <span style="color:#f92672">&amp;</span>filter_block_handle);
+  }
+
+  <span style="color:#75715e">// Write metaindex block
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (ok()) {
+    BlockBuilder <span style="color:#a6e22e">meta_index_block</span>(<span style="color:#f92672">&amp;</span>r<span style="color:#f92672">-&gt;</span>options);
+    <span style="color:#66d9ef">if</span> (r<span style="color:#f92672">-&gt;</span>filter_block <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nullptr</span>) {
+      <span style="color:#75715e">// Add mapping from &#34;filter.Name&#34; to location of filter data
+</span><span style="color:#75715e"></span>      std<span style="color:#f92672">::</span>string key <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;filter.&#34;</span>;
+      key.append(r<span style="color:#f92672">-&gt;</span>options.filter_policy<span style="color:#f92672">-&gt;</span>Name());
+      std<span style="color:#f92672">::</span>string handle_encoding;
+      filter_block_handle.EncodeTo(<span style="color:#f92672">&amp;</span>handle_encoding);
+      meta_index_block.Add(key, handle_encoding);
+    }
+
+    <span style="color:#75715e">// TODO(postrelease): Add stats and other meta blocks
+</span><span style="color:#75715e"></span>    WriteBlock(<span style="color:#f92672">&amp;</span>meta_index_block, <span style="color:#f92672">&amp;</span>metaindex_block_handle);
+  }
+
+  <span style="color:#75715e">// Write index block
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (ok()) {
+      <span style="color:#75715e">// 写入最后一个block的index
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (r<span style="color:#f92672">-&gt;</span>pending_index_entry) {
+      r<span style="color:#f92672">-&gt;</span>options.comparator<span style="color:#f92672">-&gt;</span>FindShortSuccessor(<span style="color:#f92672">&amp;</span>r<span style="color:#f92672">-&gt;</span>last_key);
+      std<span style="color:#f92672">::</span>string handle_encoding;
+      r<span style="color:#f92672">-&gt;</span>pending_handle.EncodeTo(<span style="color:#f92672">&amp;</span>handle_encoding);
+      r<span style="color:#f92672">-&gt;</span>index_block.Add(r<span style="color:#f92672">-&gt;</span>last_key, Slice(handle_encoding));
+      r<span style="color:#f92672">-&gt;</span>pending_index_entry <span style="color:#f92672">=</span> false;
+    }
+    <span style="color:#75715e">// 把index数据写到文件里
+</span><span style="color:#75715e"></span>    WriteBlock(<span style="color:#f92672">&amp;</span>r<span style="color:#f92672">-&gt;</span>index_block, <span style="color:#f92672">&amp;</span>index_block_handle);
+  }
+
+  <span style="color:#75715e">// Write footer
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (ok()) {
+    Footer footer;
+    footer.set_metaindex_handle(metaindex_block_handle);
+    footer.set_index_handle(index_block_handle);
+    std<span style="color:#f92672">::</span>string footer_encoding;
+    <span style="color:#75715e">// 生成footer
+</span><span style="color:#75715e"></span>    footer.EncodeTo(<span style="color:#f92672">&amp;</span>footer_encoding);
+    r<span style="color:#f92672">-&gt;</span>status <span style="color:#f92672">=</span> r<span style="color:#f92672">-&gt;</span>file<span style="color:#f92672">-&gt;</span>Append(footer_encoding);
+    <span style="color:#66d9ef">if</span> (r<span style="color:#f92672">-&gt;</span>status.ok()) {
+      r<span style="color:#f92672">-&gt;</span>offset <span style="color:#f92672">+=</span> footer_encoding.size();
+    }
+  }
+  <span style="color:#66d9ef">return</span> r<span style="color:#f92672">-&gt;</span>status;
+}
+</code></pre></div><p>通过这一篇的学习, 我们了解了sst文件的结构, 还有最主要的三个方法的详细实现. 至于这三个方法在哪里被调用, 我们在后面的章节再讲, 因为这是更上层的逻辑.</p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>Author:</span>
+                <span>Atwood.Wang </span>
+                </p>
+            
+           
+             
+            <p class="copyright-item">
+                    <span>Link:</span>
+                    <a href=http://atwoodwang.com/2020/leveldb_sst/>http://atwoodwang.com/2020/leveldb_sst/</span>
+            </p>
+            
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+            <section>
+            <i class="iconfont icon-tag"></i>Tag(s): 
+            
+            <span class="tag"><a href="http://atwoodwang.com/tags/leveldb/">
+                    #LevelDB</a></span>
+            
+            <span class="tag"><a href="http://atwoodwang.com/tags/databases/">
+                    #Databases</a></span>
+            
+            <span class="tag"><a href="http://atwoodwang.com/tags/c&#43;&#43;/">
+                    #C&#43;&#43;</a></span>
+            
+            <span class="tag"><a href="http://atwoodwang.com/tags/%E6%95%B0%E6%8D%AE%E5%BC%95%E6%93%8E/">
+                    #数据引擎</a></span>
+            
+            </section>
+        
+        <section>
+                <a href="javascript:window.history.back();">back</a></span> · 
+                <span><a href="http://atwoodwang.com/">home</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="http://atwoodwang.com/2020/leveldb_skiplist/" class="prev" rel="prev" title="深入浅出 LevelDB (3) - SkipList 跳跃链表"><i class="iconfont icon-left"></i>&nbsp;深入浅出 LevelDB (3) - SkipList 跳跃链表</a>
+         
+        
+        <a href="http://atwoodwang.com/2020/leveldb_memtable/" class="next" rel="next" title="深入浅出 LevelDB (5) - Memtable 内存表">深入浅出 LevelDB (5) - Memtable 内存表&nbsp;<i class="iconfont icon-right"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+                 
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2020 - 2020</span>
+        
+        <span class="with-love">
+    	 <i class="iconfont icon-love"></i> 
+         </span>
+         
+            <span class="author" itemprop="copyrightHolder"><a href="http://atwoodwang.com/">Atwood.Wang</a> | </span> 
+         
+
+         
+		  <span>Powered by <a href="https://gohugo.io/" target="_blank" rel="external nofollow">Hugo</a> & <a href="https://github.com/liuzc/leaveit" target="_blank" rel="external nofollow">LeaveIt</a></span> 
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+     <link href="//lib.baomitu.com/lightgallery/1.6.11/css/lightgallery.min.css" rel="stylesheet">  
+      
+     <script src="/js/vendor_gallery.min.js" async="" ></script>
+    
+  
+
+
+
+     </div>
+  </body>
+</html>
