@@ -98,6 +98,8 @@ BlockHandle实际长度和最大长度之间的空隙填充为0. metaindex_handl
 
 其中最重要的就是`Add`和`Finish`方法, 我们一个一个看.
 
+**注意: 下面代码中的key, 指的都是internal key, 也就是user key + sequence number + type, 不是单单的user key**
+
 #### Add
 ```c++
 void BlockBuilder::Add(const Slice& key, const Slice& value) {
