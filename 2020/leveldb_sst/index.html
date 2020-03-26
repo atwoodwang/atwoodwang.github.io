@@ -9,8 +9,8 @@
   
   
   
-  <link rel="prev" href="http://atwoodwang.com/2020/leveldb_skiplist/" />
-  <link rel="next" href="http://atwoodwang.com/2020/leveldb_memtable/" />
+  <link rel="prev" href="http://atwoodwang.com/2020/leveldb_memtable/" />
+  
   <link rel="canonical" href="http://atwoodwang.com/2020/leveldb_sst/" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -55,7 +55,7 @@
     "datePublished": "2020-03-23 00:00:00 \x2b0000 UTC",
     "dateModified" : "2020-03-23 00:00:00 \x2b0000 UTC",
     "url" : "http:\/\/atwoodwang.com\/2020\/leveldb_sst\/",
-    "wordCount" : "6088",
+    "wordCount" : "6137",
     "keywords" : [ "LevelDB","Databases","C\x2b\x2b","数据引擎", "Atwood\x27s Blog"]
 }
 </script>
@@ -153,7 +153,7 @@
                         <a href="http://atwoodwang.com/categories/release/"> Release </a>
                         
                 </span>
-                <span class="post-word-count">, 6088 words</span>
+                <span class="post-word-count">, 6137 words</span>
                 <span id="busuanzi_container_page_pv">
                     , <span id="busuanzi_value_page_pv"></span> views
                 </span>
@@ -237,6 +237,7 @@ BlockHandle实际长度和最大长度之间的空隙填充为0. metaindex_handl
 <p>首先我们来看看每个block是怎么生成的, LevelDB里定义了一个BlockBuilder类, 专门生成每一个block. 这一部分源码在<a href="https://github.com/google/leveldb/blob/master/table/block_builder.h">leveldb/table/block_builder.h</a>和<a href="https://github.com/google/leveldb/blob/master/table/block_builder.cc">leveldb/table/block_builder.cc</a>中.</p>
 <p><img src="/images/leveldb_sst/blockbuilder.svg" alt="blockbuilder"></p>
 <p>其中最重要的就是<code>Add</code>和<code>Finish</code>方法, 我们一个一个看.</p>
+<p><strong>注意: 下面代码中的key, 指的都是internal key, 也就是user key + sequence number + type, 不是单单的user key</strong></p>
 <h4 id="add">Add</h4>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#66d9ef">void</span> BlockBuilder<span style="color:#f92672">::</span>Add(<span style="color:#66d9ef">const</span> Slice<span style="color:#f92672">&amp;</span> key, <span style="color:#66d9ef">const</span> Slice<span style="color:#f92672">&amp;</span> value) {
   Slice <span style="color:#a6e22e">last_key_piece</span>(last_key_);
@@ -552,10 +553,8 @@ BlockHandle实际长度和最大长度之间的空隙填充为0. metaindex_handl
 
     <div class="post-nav">
         
-        <a href="http://atwoodwang.com/2020/leveldb_skiplist/" class="prev" rel="prev" title="深入浅出 LevelDB (3) - SkipList 跳跃链表"><i class="iconfont icon-left"></i>&nbsp;深入浅出 LevelDB (3) - SkipList 跳跃链表</a>
+        <a href="http://atwoodwang.com/2020/leveldb_memtable/" class="prev" rel="prev" title="深入浅出 LevelDB (5) - Memtable 内存表"><i class="iconfont icon-left"></i>&nbsp;深入浅出 LevelDB (5) - Memtable 内存表</a>
          
-        
-        <a href="http://atwoodwang.com/2020/leveldb_memtable/" class="next" rel="next" title="深入浅出 LevelDB (5) - Memtable 内存表">深入浅出 LevelDB (5) - Memtable 内存表&nbsp;<i class="iconfont icon-right"></i></a>
         
     </div>
 
